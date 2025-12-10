@@ -1,0 +1,261 @@
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.5); border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(156, 163, 175, 0.8); }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
+body {
+    transition: background-color 0.5s, color 0.5s;
+    font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+h1, h2, h3 {
+    font-family: 'Space Grotesk', 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Markdown Styles */
+.markdown-body p { margin-bottom: 0.75rem; line-height: 1.6; }
+.markdown-body strong { font-weight: 700; color: inherit; }
+.markdown-body em { font-style: italic; color: inherit; }
+.markdown-body ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+.markdown-body ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
+
+/* Particle Background Effect */
+.firefly-dot {
+    position: absolute;
+    border-radius: 50%;
+    background: white;
+    filter: blur(2px);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+}
+
+/* Upload Area Dashed Border Animation */
+.upload-area {
+    background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%236366F1FF' stroke-width='2' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+    transition: all 0.3s;
+}
+.upload-area:hover {
+    background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%23818CF8FF' stroke-width='3' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+    background-color: rgba(99, 102, 241, 0.05);
+}
+
+/* Floating Animation */
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+}
+
+.animate-float {
+    animation: float 3s ease-in-out infinite;
+}
+
+/* ==========================================
+   MODERN BUTTON SYSTEM - Đại tu giao diện nút bấm
+   ========================================== */
+
+/* Base button core */
+.btn-core {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 700;
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.75rem;
+}
+
+.btn-core:active {
+    transform: scale(0.95);
+}
+
+/* Primary gradient button với hiệu ứng sang trọng */
+.btn-primary {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+    background-size: 200% 200%;
+    animation: gradientShift 3s ease infinite;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.btn-primary:hover {
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5), 0 0 0 2px rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    background-position: 100% 50%;
+}
+
+.btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.btn-primary:hover::before {
+    opacity: 1;
+}
+
+@keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+/* Glass effect button - hiệu ứng kính mờ */
+.btn-glass {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-glass:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+}
+
+/* Glow effect button - hiệu ứng phát sáng */
+.btn-glow {
+    box-shadow: 0 0 20px rgba(163, 230, 53, 0.4), 0 0 40px rgba(34, 211, 238, 0.2);
+    border: 1px solid rgba(163, 230, 53, 0.5);
+}
+
+.btn-glow:hover {
+    box-shadow: 0 0 30px rgba(163, 230, 53, 0.6), 0 0 60px rgba(34, 211, 238, 0.4), 0 0 80px rgba(99, 102, 241, 0.2);
+    border-color: rgba(163, 230, 53, 0.8);
+    transform: translateY(-2px) scale(1.02);
+}
+
+/* Pulse animation cho các nút quan trọng */
+@keyframes pulse-glow {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 40px rgba(99, 102, 241, 0.6), 0 0 60px rgba(139, 92, 246, 0.4);
+    }
+}
+
+.btn-pulse {
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Secondary button - nút phụ hiện đại */
+.btn-secondary {
+    background: linear-gradient(135deg, rgba(100, 116, 139, 0.1) 0%, rgba(71, 85, 105, 0.1) 100%);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    backdrop-filter: blur(8px);
+}
+
+.btn-secondary:hover {
+    background: linear-gradient(135deg, rgba(100, 116, 139, 0.2) 0%, rgba(71, 85, 105, 0.2) 100%);
+    border-color: rgba(148, 163, 184, 0.3);
+    transform: translateY(-1px);
+}
+
+/* Danger button - nút nguy hiểm */
+.btn-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger:hover {
+    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.5);
+    transform: translateY(-2px);
+}
+
+/* Success button - nút thành công */
+.btn-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.btn-success:hover {
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5);
+    transform: translateY(-2px);
+}
+
+/* ==========================================
+   NAVIGATION BUTTONS - Hiệu ứng riêng cho header nav
+   ========================================== */
+
+/* Library button - Hiệu ứng shimmer sang trọng */
+.btn-nav-library {
+    position: relative;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    backdrop-filter: blur(12px);
+    overflow: hidden;
+}
+
+.btn-nav-library::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+        45deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.1) 50%,
+        transparent 70%
+    );
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+    100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+}
+
+.btn-nav-library:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(139, 92, 246, 0.25) 100%);
+    border-color: rgba(99, 102, 241, 0.5);
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+    transform: translateY(-2px);
+}
+
+/* Showcase button - Hiệu ứng border gradient chạy */
+.btn-nav-showcase {
+    position: relative;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+.btn-nav-showcase::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 0.75rem;
+    padding: 2px;
+    background: linear-gradient(90deg, 
+        #6366f1 0%, 
+        #8b5cf6 25%, 
+        #ec4899 50%, 
+        #8b5cf6 75%, 
+        #6366f1 100%
+    );
+    background-size: 300% 100%;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    animation: borderFlow 3s linear infinite;
+    z-index: -1;
+}
+
+@keyframes borderFlow {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 300% 0%; }
+}
+
+.btn-nav-showcase:hover {
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.4), 0 0 40px rgba(236, 72, 153, 0.2);
+    transform: translateY(-2px);
+}
+
+
