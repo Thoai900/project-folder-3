@@ -514,16 +514,238 @@ function handleRegister(e) {
     showToast(`Đăng ký thành công! Chào mừng ${userType === 'teacher' ? 'Thầy/Cô' : 'các bạn'} đến PromptMaster!`);
 }
 
-// --- Forgot Password (mock flow) ---
+// --- Forgot Password (THỰC TẾ - gửi email) ---
 function handleForgotPassword() {
     const emailInput = document.querySelector('#auth-form input[name="email"]');
     const email = emailInput?.value?.trim();
+    
     if (!email) {
-        showToast("Vui lòng nhập email trước khi quên mật khẩu!");
+        showToast("Vui lòng nhập email để reset mật khẩu!");
         emailInput?.focus();
         return;
     }
-    showToast(`Đã gửi hướng dẫn đặt lại mật khẩu tới ${email} (mô phỏng).`);
+    
+    // Kiểm tra email có tồn tại không
+    const users = JSON.parse(localStorage.getItem('pm_users') || '[]');
+    const user = users.find(u => u.email === email);
+    
+    if (!user) {
+        showToast("❌ Email này không tồn tại trong hệ thống!");
+        return;
+    }
+    
+    // Tạo reset token và lưu
+    const resetToken = generateToken();
+    const resetData = {
+        email: email,
+        token: resetToken,
+        createdAt: Date.now(),
+        expiresIn: 3600000 // 1 giờ
+    };
+    
+    // Lưu reset request vào localStorage
+    let resetRequests = JSON.parse(localStorage.getItem('pm_resetRequests') || '[]');
+    resetRequests = resetRequests.filter(r => r.email !== email); // Xóa request cũ
+    resetRequests.push(resetData);
+    localStorage.setItem('pm_resetRequests', JSON.stringify(resetRequests));
+    
+    // Gửi email
+    sendResetPasswordEmail(email, resetToken);
+}
+
+function generateToken() {
+    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
+// Gửi email bằng EmailJS (phải setup EmailJS ID trước)
+function sendResetPasswordEmail(email, token) {
+    const resetLink = `${window.location.origin}${window.location.pathname}?resetToken=${token}`;
+    
+    // Kiểm tra xem EmailJS đã setup chưa
+    if (typeof emailjs === 'undefined') {
+        // Nếu chưa setup EmailJS, hiển thị token để test
+        showResetPasswordModal(email, token, resetLink);
+        return;
+    }
+    
+    // Gửi email qua EmailJS
+    const templateParams = {
+        to_email: email,
+        reset_link: resetLink,
+        token: token
+    };
+    
+    emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams)
+        .then(response => {
+            showToast('✓ Email reset password đã được gửi! Kiểm tra inbox của bạn.');
+        })
+        .catch(error => {
+            showToast('❌ Không thể gửi email. Thử lại sau.');
+            console.error('EmailJS Error:', error);
+        });
+}
+
+// Modal hiển thị token (cho dev/test)
+function showResetPasswordModal(email, token, resetLink) {
+    const styles = getStyles();
+    const modalContent = document.getElementById('modal-body');
+    
+    modalContent.innerHTML = `
+        <div class="p-8 space-y-6">
+            <div class="text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl ${getColorClass('softBg')} mb-4">
+                    <i data-lucide="mail" size="32" class="${getColorClass('text')}"></i>
+                </div>
+                <h2 class="text-2xl font-black ${styles.textPrimary} mb-2">Reset Mật Khẩu</h2>
+                <p class="${styles.textSecondary}">Email: <span class="font-semibold">${email}</span></p>
+            </div>
+            
+            <div class="rounded-lg ${styles.inputBg} border ${styles.border} p-4 space-y-3">
+                <p class="${styles.textSecondary} text-sm"><strong>Reset Token:</strong></p>
+                <div class="bg-black/30 border ${styles.border} rounded-lg p-3 font-mono text-xs break-all ${getColorClass('text')}">
+                    ${token}
+                </div>
+                <button onclick="copyToClipboard('${token}')" class="w-full px-4 py-2 rounded-lg ${getColorClass('bg')} hover:opacity-90 text-white font-semibold text-sm">
+                    <i data-lucide="copy" size="16" class="inline mr-2"></i>
+                    Copy Token
+                </button>
+            </div>
+            
+            <div class="rounded-lg bg-blue-500/10 border border-blue-500/30 p-4">
+                <p class="font-semibold text-blue-600 mb-2">💡 Cách sử dụng:</p>
+                <ol class="text-sm text-blue-600/80 space-y-1 list-decimal list-inside">
+                    <li>Copy token ở trên</li>
+                    <li>Nếu đã setup EmailJS - email sẽ được gửi tự động</li>
+                    <li>Người nhận sẽ nhận được link reset trong email</li>
+                    <li>Click link để reset mật khẩu mới</li>
+                </ol>
+            </div>
+            
+            <div class="rounded-lg bg-amber-500/10 border border-amber-500/30 p-4">
+                <p class="font-semibold text-amber-600 mb-2">⚙️ Setup EmailJS (tuỳ chọn):</p>
+                <p class="text-sm text-amber-600/80 mb-2">Để gửi email thật:</p>
+                <ol class="text-xs text-amber-600/80 space-y-1 list-decimal list-inside">
+                    <li>Tạo tài khoản EmailJS (emailjs.com)</li>
+                    <li>Thay YOUR_SERVICE_ID, YOUR_TEMPLATE_ID trong code</li>
+                    <li>Tạo email template có biến: to_email, reset_link</li>
+                </ol>
+            </div>
+            
+            <div class="flex gap-3 pt-4 border-t ${styles.border}">
+                <button onclick="closeModal()" class="flex-1 py-3 rounded-xl border ${styles.border} ${styles.textPrimary} hover:bg-white/5 font-bold transition-all">
+                    Đóng
+                </button>
+                <button onclick="showResetPasswordForm('${email}', '${token}')" class="flex-1 py-3 rounded-xl ${getColorClass('bg')} hover:opacity-90 text-white font-bold transition-all">
+                    Reset Mật Khẩu Ngay
+                </button>
+            </div>
+        </div>
+    `;
+    
+    openModal();
+    lucide.createIcons();
+}
+
+// Form reset mật khẩu
+function showResetPasswordForm(email, token) {
+    const styles = getStyles();
+    const modalContent = document.getElementById('modal-body');
+    
+    modalContent.innerHTML = `
+        <div class="p-8 space-y-6">
+            <div class="text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl ${getColorClass('softBg')} mb-4">
+                    <i data-lucide="lock" size="32" class="${getColorClass('text')}"></i>
+                </div>
+                <h2 class="text-2xl font-black ${styles.textPrimary} mb-2">Đặt Mật Khẩu Mới</h2>
+                <p class="${styles.textSecondary}">Email: <span class="font-semibold">${email}</span></p>
+            </div>
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="${styles.textPrimary} font-semibold block mb-2">Mật khẩu mới</label>
+                    <input type="password" id="new-password" placeholder="Nhập mật khẩu mới" 
+                        class="w-full px-4 py-2 rounded-lg ${styles.inputBg} border ${styles.border} ${styles.textPrimary} placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                
+                <div>
+                    <label class="${styles.textPrimary} font-semibold block mb-2">Xác nhận mật khẩu</label>
+                    <input type="password" id="confirm-password" placeholder="Xác nhận mật khẩu mới" 
+                        class="w-full px-4 py-2 rounded-lg ${styles.inputBg} border ${styles.border} ${styles.textPrimary} placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+            
+            <div class="flex gap-3 pt-4 border-t ${styles.border}">
+                <button onclick="closeModal()" class="flex-1 py-3 rounded-xl border ${styles.border} ${styles.textPrimary} hover:bg-white/5 font-bold transition-all">
+                    Hủy
+                </button>
+                <button onclick="confirmResetPassword('${email}', '${token}')" class="flex-1 py-3 rounded-xl ${getColorClass('bg')} hover:opacity-90 text-white font-bold transition-all">
+                    Đặt Lại Mật Khẩu
+                </button>
+            </div>
+        </div>
+    `;
+    
+    openModal();
+    lucide.createIcons();
+}
+
+function confirmResetPassword(email, token) {
+    const newPassword = document.getElementById('new-password').value.trim();
+    const confirmPassword = document.getElementById('confirm-password').value.trim();
+    
+    // Validate
+    if (!newPassword || !confirmPassword) {
+        showToast('⚠️ Vui lòng nhập cả 2 trường mật khẩu!');
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        showToast('❌ Mật khẩu không trùng khớp!');
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        showToast('❌ Mật khẩu phải có ít nhất 6 ký tự!');
+        return;
+    }
+    
+    // Kiểm tra token có hợp lệ không
+    const resetRequests = JSON.parse(localStorage.getItem('pm_resetRequests') || '[]');
+    const resetReq = resetRequests.find(r => r.email === email && r.token === token);
+    
+    if (!resetReq) {
+        showToast('❌ Token không hợp lệ!');
+        return;
+    }
+    
+    if (Date.now() - resetReq.createdAt > resetReq.expiresIn) {
+        showToast('❌ Token đã hết hạn (1 giờ)!');
+        return;
+    }
+    
+    // Update mật khẩu
+    const users = JSON.parse(localStorage.getItem('pm_users') || '[]');
+    const userIndex = users.findIndex(u => u.email === email);
+    
+    if (userIndex !== -1) {
+        users[userIndex].password = newPassword;
+        localStorage.setItem('pm_users', JSON.stringify(users));
+        
+        // Xóa reset request
+        const updatedRequests = resetRequests.filter(r => r.email !== email);
+        localStorage.setItem('pm_resetRequests', JSON.stringify(updatedRequests));
+        
+        closeModal();
+        showToast('✓ Mật khẩu đã được đặt lại thành công!');
+        renderApp();
+    }
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('✓ Đã copy token!');
+    });
 }
 
 // --- Toggle password visibility ---
