@@ -1,5 +1,8 @@
 # AI Prompt Refiner Extension - Installation Script
-# Run: Right-click -> Run with PowerShell ISE
+# Chay: Right-click -> Run with PowerShell hoac Run with PowerShell ISE
+
+# Set execution policy for this process
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 
 Write-Host ""
 Write-Host "======================================" -ForegroundColor Cyan
@@ -14,7 +17,7 @@ if ([string]::IsNullOrWhiteSpace($scriptDir)) {
     $scriptDir = Get-Location
 }
 
-Write-Host "[1/5] Kiem tra thu muc extension..." -ForegroundColor Yellow
+Write-Host "[1/6] Kiem tra thu muc extension..." -ForegroundColor Yellow
 
 $extensionPath = Join-Path -Path $scriptDir -ChildPath "extension"
 $manifestPath = Join-Path -Path $extensionPath -ChildPath "manifest.json"
@@ -24,7 +27,7 @@ if (-not (Test-Path -Path $extensionPath)) {
     Write-Host "❌ Loi: Khong tim thay thu muc 'extension'" -ForegroundColor Red
     Write-Host "   Duong dan tim: $extensionPath" -ForegroundColor Red
     Write-Host ""
-    Write-Host "   Gia i: Hay chac chan ban da giai nen ZIP va chay script trong thu muc chung" -ForegroundColor Yellow
+    Write-Host "   Goi y: Hay chac chan ban da giai nen ZIP va chay script trong thu muc chung" -ForegroundColor Yellow
     Write-Host ""
     Read-Host "Nhan Enter de thoat"
     exit 1
@@ -81,7 +84,7 @@ Write-Host ""
 Start-Sleep -Milliseconds 500
 
 # Find Extensions folder
-Write-Host "[3/5] Tim thu muc Extensions..." -ForegroundColor Yellow
+Write-Host "[4/6] Tim thu muc Extensions..." -ForegroundColor Yellow
 
 $extensionsPath = $null
 
@@ -104,16 +107,46 @@ Write-Host ""
 Start-Sleep -Milliseconds 500
 
 # Copy extension
-Write-Host "[4/5] Cai dat extension..." -ForegroundColor Yellow
+Write-Host "[5/6] Go bo version cu (neu co)..." -ForegroundColor Yellow
 
 $destPath = Join-Path -Path $extensionsPath -ChildPath "ai-prompt-refiner"
 
-# Remove old version if exists
+# Remove old version COMPLETELY - xu ly tung file
 if (Test-Path -Path $destPath) {
-    Write-Host "  Go bo version cu..." -ForegroundColor Gray
-    Remove-Item -Path $destPath -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Host "  Tim thay version cu, dang xoa..." -ForegroundColor Gray
+    
+    # Close Chrome/Edge if running to release file locks
+    $processName = $null
+    if ($browserType -eq "Edge") {
+        $processName = "msedge"
+    } else {
+        $processName = "chrome"
+    }
+    
+    # Kill browser process if running
+    Get-Process -Name $processName -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 1
+    
+    # Remove directory
+    try {
+        Remove-Item -Path $destPath -Recurse -Force -ErrorAction Stop
+        Write-Host "  ✓ Xoa thanh cong" -ForegroundColor Gray
+    } catch {
+        Write-Host "  ⚠️  Khong the xoa toan bo, dang thu cach khac..." -ForegroundColor Yellow
+        # Try to remove individual files
+        Get-ChildItem -Path $destPath -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path $destPath -Force -ErrorAction SilentlyContinue
+    }
+    
     Start-Sleep -Milliseconds 500
 }
+
+Write-Host "✓ Prep hoan tat" -ForegroundColor Green
+Write-Host ""
+Start-Sleep -Milliseconds 500
+
+# Copy extension
+Write-Host "[6/6] Cai dat extension moi..." -ForegroundColor Yellow
 
 # Copy new extension
 Write-Host "  Sao chep files..." -ForegroundColor Gray
@@ -132,7 +165,7 @@ Write-Host ""
 Start-Sleep -Milliseconds 500
 
 # Open browser
-Write-Host "[5/5] Mo trang Extensions..." -ForegroundColor Yellow
+Write-Host "[7/7] Mo trang Extensions..." -ForegroundColor Yellow
 
 try {
     Write-Host "  Mo $browserType..." -ForegroundColor Gray
