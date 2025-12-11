@@ -440,29 +440,29 @@ function handleRegister(e) {
     showToast("Đăng ký thành công!");
 }
 
+// --- Forgot Password (mock flow) ---
 function handleForgotPassword() {
-    const emailInput = document.getElementById('auth-email');
-    const email = emailInput?.value.trim();
+    const emailInput = document.querySelector('#auth-form input[name="email"]');
+    const email = emailInput?.value?.trim();
     if (!email) {
-        showToast("Nhập email để khôi phục mật khẩu");
+        showToast("Vui lòng nhập email trước khi quên mật khẩu!");
         emailInput?.focus();
         return;
     }
-    const user = state.users.find(u => u.email === email);
-    if (!user) {
-        showToast("Không tìm thấy tài khoản với email này");
-        return;
-    }
-    showToast(`Mật khẩu của bạn: ${user.password}`);
+    showToast(`Đã gửi hướng dẫn đặt lại mật khẩu tới ${email} (mô phỏng).`);
 }
 
+// --- Toggle password visibility ---
 function togglePasswordVisibility() {
-    const input = document.getElementById('auth-password');
-    const btn = document.getElementById('password-toggle-btn');
-    if (!input || !btn) return;
+    const input = document.querySelector('#auth-form input[name="password"]');
+    const eye = document.getElementById('password-eye');
+    if (!input) return;
     const isHidden = input.type === 'password';
     input.type = isHidden ? 'text' : 'password';
-    btn.textContent = isHidden ? 'Ẩn' : 'Hiện';
+    if (eye) {
+        eye.setAttribute('data-lucide', isHidden ? 'eye-off' : 'eye');
+        lucide.createIcons();
+    }
 }
 
 function handleLogout() {
@@ -1307,6 +1307,10 @@ function renderHeader() {
 
         userSectionHTML = `
             <div class="flex items-center gap-3 relative group/profile cursor-pointer">
+                <button onclick="toggleTheme(); renderApp();" class="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-full border ${styles.border} ${styles.iconBg} text-xs font-semibold hover:border-indigo-500/50 hover:text-indigo-500 transition-colors">
+                    <i data-lucide="sun" class="${styles.textSecondary}" size="16"></i>
+                    <span class="${styles.textSecondary}">Sáng/Tối</span>
+                </button>
                 <div class="text-right hidden sm:block" onclick="openModal('login')">
                     <p class="text-xs ${styles.textSecondary}">Xin chào,</p>
                     <p class="text-sm font-bold ${styles.textPrimary} hover:text-indigo-400 transition-colors">${state.currentUser.name}</p>
@@ -1336,9 +1340,15 @@ function renderHeader() {
         `;
     } else {
         userSectionHTML = `
-            <button onclick="openModal('login')" class="px-5 py-2.5 rounded-full font-medium text-sm transition-all duration-300 border ${styles.border} ${state.theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleTheme(); renderApp();" class="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-full border ${styles.border} ${styles.iconBg} text-xs font-semibold hover:border-indigo-500/50 hover:text-indigo-500 transition-colors">
+                    <i data-lucide="sun" class="${styles.textSecondary}" size="16"></i>
+                    <span class="${styles.textSecondary}">Sáng/Tối</span>
+                </button>
+                <button onclick="openModal('login')" class="px-5 py-2.5 rounded-full font-medium text-sm transition-all duration-300 border ${styles.border} ${state.theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}">
                 Đăng nhập
-            </button>
+                </button>
+            </div>
         `;
     }
 
@@ -1365,12 +1375,6 @@ function renderHeader() {
         `;
     };
 
-    const themeToggle = `
-        <button onclick="toggleTheme()" class="p-2.5 rounded-full border ${styles.border} ${styles.iconBg} hover:border-indigo-400 hover:text-indigo-300 transition-all shadow-sm" aria-label="Đổi giao diện sáng/tối">
-            <i data-lucide="${state.theme === 'dark' ? 'sun' : 'moon'}" size="18"></i>
-        </button>
-    `;
-
     return `
         <header class="relative z-40 w-full">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 flex items-center gap-4">
@@ -1391,7 +1395,6 @@ function renderHeader() {
                 </div>
 
                 <div class="flex items-center gap-3 ml-auto">
-                    ${themeToggle}
                     ${userSectionHTML}
                 </div>
             </div>
@@ -2112,7 +2115,47 @@ function renderShowcase() {
                 </div>
             </div>
 
+            <!-- Prompt Importance & Quick Refiner CTA -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-24">
+                <div class="${styles.cardBg} rounded-3xl border ${styles.border} p-8 shadow-lg">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                            <i data-lucide="sparkles" size="24"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm ${styles.textSecondary} uppercase tracking-widest font-semibold">Prompt là chìa khóa</p>
+                            <h3 class="text-2xl font-bold ${styles.textPrimary}">Tại sao prompt quyết định 70% chất lượng AI?</h3>
+                        </div>
+                    </div>
+                    <ul class="space-y-3 text-sm ${styles.textSecondary} leading-relaxed">
+                        <li class="flex gap-3"><i data-lucide="check-circle" class="text-emerald-500" size="18"></i><span>Giúp mô hình hiểu đúng ngữ cảnh, vai trò và mục tiêu đầu ra.</span></li>
+                        <li class="flex gap-3"><i data-lucide="check-circle" class="text-emerald-500" size="18"></i><span>Giảm 30-50% số lần phải hỏi lại hoặc sửa câu trả lời.</span></li>
+                        <li class="flex gap-3"><i data-lucide="check-circle" class="text-emerald-500" size="18"></i><span>Tối ưu chi phí token và thời gian phản hồi khi làm việc với LLM.</span></li>
+                        <li class="flex gap-3"><i data-lucide="check-circle" class="text-emerald-500" size="18"></i><span>Tạo khuôn mẫu (prompt template) để tái sử dụng cho đội nhóm.</span></li>
+                    </ul>
+                </div>
 
+                <div class="rounded-3xl border ${styles.border} p-8 bg-gradient-to-br from-indigo-600 via-indigo-500 to-cyan-500 text-white shadow-xl relative overflow-hidden">
+                    <div class="absolute inset-0 bg-white/5 backdrop-blur-sm opacity-40"></div>
+                    <div class="relative z-10">
+                        <p class="text-sm font-semibold uppercase tracking-widest mb-2">Tiện ích trình duyệt</p>
+                        <h3 class="text-3xl font-black mb-3">Tinh chỉnh Prompt siêu nhanh</h3>
+                        <p class="text-white/80 mb-6 text-sm leading-relaxed">Một cú nhấp để cài đặt tiện ích AI Prompt Refiner. Tích hợp trực tiếp vào khung nhập ChatGPT, Gemini, Claude… và tối ưu prompt tức thì.</p>
+                        <div class="flex flex-wrap gap-3">
+                            <a href="extension/README.md" target="_blank" class="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white text-indigo-700 font-semibold shadow-lg hover:shadow-xl transition-all duration-200">
+                                <i data-lucide="download" size="18"></i>
+                                Cài tiện ích tinh chỉnh
+                            </a>
+                            <a href="SETUP_GUIDE.md" target="_blank" class="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white/10 border border-white/30 text-white font-semibold hover:bg-white/15 transition-all duration-200">
+                                <i data-lucide="book-open" size="18"></i>
+                                Xem hướng dẫn nhanh
+                            </a>
+                        </div>
+                        <p class="mt-4 text-xs text-white/70">Hỗ trợ Chrome/Edge. Sau khi cài đặt, nút “Tinh chỉnh” xuất hiện ngay trong hộp chat.</p>
+                    </div>
+                </div>
+            </div>
+            
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-24">
                 ${AI_TOOLS.map(tool => `
                     <div class="${styles.cardBg} rounded-3xl p-8 border ${styles.border} hover:border-indigo-500/30 transition-all duration-500 hover:-translate-y-2 group relative overflow-hidden shadow-sm hover:shadow-xl">
@@ -2375,19 +2418,21 @@ function renderLoginModal(container) {
                         <label class="block text-sm font-medium ${styles.textSecondary} mb-2">Email</label>
                         <div class="relative">
                             <i data-lucide="mail" size="18" class="absolute left-4 top-3.5 ${styles.textSecondary}"></i>
-                            <input id="auth-email" type="email" name="email" required class="w-full ${styles.inputBg} border ${styles.border} rounded-xl pl-12 pr-4 py-3 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all" placeholder="name@example.com">
+                            <input type="email" name="email" required class="w-full ${styles.inputBg} border ${styles.border} rounded-xl pl-12 pr-4 py-3 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all" placeholder="name@example.com">
                         </div>
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-medium ${styles.textSecondary} mb-2 flex items-center justify-between">
-                            <span>Mật khẩu</span>
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-sm font-medium ${styles.textSecondary}">Mật khẩu</label>
                             <button type="button" onclick="handleForgotPassword()" class="text-xs text-indigo-500 hover:underline">Quên mật khẩu?</button>
-                        </label>
+                        </div>
                         <div class="relative">
                             <i data-lucide="lock" size="18" class="absolute left-4 top-3.5 ${styles.textSecondary}"></i>
-                            <input id="auth-password" type="password" name="password" required class="w-full ${styles.inputBg} border ${styles.border} rounded-xl pl-12 pr-12 py-3 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all" placeholder="••••••••">
-                            <button type="button" id="password-toggle-btn" onclick="togglePasswordVisibility()" class="absolute right-3 top-2.5 px-3 py-1 text-xs rounded-lg ${styles.iconBg} ${styles.textSecondary} hover:${styles.textPrimary} border ${styles.border}">Hiện</button>
+                            <input type="password" name="password" required class="w-full ${styles.inputBg} border ${styles.border} rounded-xl pl-12 pr-12 py-3 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all" placeholder="••••••••">
+                            <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-3.5 text-slate-400 hover:text-indigo-500 transition-colors">
+                                <i id="password-eye" data-lucide="eye" size="18"></i>
+                            </button>
                         </div>
                     </div>
 
@@ -3151,75 +3196,6 @@ function renderShareModal(container) {
             </div>
         </div>
     `;
-}
-
-// Install Extension Function
-function installExtension() {
-    const userAgent = navigator.userAgent.toLowerCase();
-    
-    // Detect browser
-    if (userAgent.includes('chrome') && !userAgent.includes('edg')) {
-        // Chrome browser
-        showToast('📖 Hướng dẫn cài đặt được hiển thị dưới đây', 'info');
-        
-        const instructionHTML = `
-            <div class="text-center p-8">
-                <h3 class="text-2xl font-bold text-indigo-600 mb-6">Cài đặt AI Prompt Refiner Extension</h3>
-                
-                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 text-left rounded">
-                    <p class="font-bold text-blue-900 mb-2">📝 Các bước cài đặt:</p>
-                    <ol class="list-decimal list-inside text-sm text-blue-800 space-y-2">
-                        <li>Mở Chrome và vào: <code class="bg-white px-2 py-1 rounded">chrome://extensions/</code></li>
-                        <li>Bật <strong>Developer mode</strong> (toggle góc trên bên phải)</li>
-                        <li>Click <strong>"Load unpacked"</strong></li>
-                        <li>Chọn thư mục <code class="bg-white px-2 py-1 rounded">extension</code> từ GitHub repo</li>
-                        <li>✨ Hoàn thành! Extension sẽ xuất hiện trên toolbar</li>
-                    </ol>
-                </div>
-
-                <div class="bg-green-50 border-l-4 border-green-500 p-4 text-left rounded">
-                    <p class="font-bold text-green-900 mb-2">🚀 Sau khi cài đặt:</p>
-                    <ul class="list-disc list-inside text-sm text-green-800 space-y-1">
-                        <li>Vào ChatGPT, Gemini, Claude</li>
-                        <li>Nhập prompt vào textarea</li>
-                        <li>Click nút tím <strong>"Tinh chỉnh"</strong> hoặc nhấn <strong>Ctrl+Shift+R</strong></li>
-                        <li>Xem prompt được cải thiện tự động! ✨</li>
-                    </ul>
-                </div>
-
-                <p class="text-gray-600 text-sm mt-6">
-                    👉 Lấy extension từ: 
-                    <a href="https://github.com/Thoai900/project-folder--1-" target="_blank" class="text-indigo-600 font-bold hover:underline">GitHub Repository</a>
-                </p>
-            </div>
-        `;
-        
-        // Create modal
-        const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4';
-        modal.innerHTML = `
-            <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-gray-800"></h2>
-                    <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-800">
-                        <i data-lucide="x" size="24"></i>
-                    </button>
-                </div>
-                <div class="p-8">
-                    ${instructionHTML}
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        lucide.createIcons();
-    } else if (userAgent.includes('firefox')) {
-        showToast('🔜 Firefox support coming soon!', 'warning');
-    } else if (userAgent.includes('safari')) {
-        showToast('🔜 Safari support coming soon!', 'warning');
-    } else {
-        showToast('⚠️ Vui lòng sử dụng Chrome để cài đặt extension này!', 'warning');
-    }
 }
 
 window.onload = () => {
