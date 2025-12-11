@@ -21,32 +21,79 @@ if ([string]::IsNullOrWhiteSpace($scriptPath)) {
     $scriptPath = Get-Location
 }
 
-Write-Host "📁 Kiểm tra thư mục extension..." -ForegroundColor Yellow
-Write-Host "   Thư mục: $scriptPath" -ForegroundColor Gray
+Write-Host "📁 Checking for extension folder..." -ForegroundColor Yellow
+Write-Host "   Script location: $scriptPath" -ForegroundColor Gray
 
 $extensionPath = Join-Path $scriptPath "extension"
 $manifestPath = Join-Path $extensionPath "manifest.json"
 
+# Nếu không tìm thấy extension folder, download từ GitHub
 if (-not (Test-Path $extensionPath)) {
-    Write-Host "❌ Không tìm thấy thư mục extension!" -ForegroundColor Red
-    Write-Host "   Kiểm tra: $extensionPath" -ForegroundColor Red
+    Write-Host "❌ Extension folder not found" -ForegroundColor Yellow
     Write-Host ""
-    Read-Host "Nhấn Enter để thoát"
-    exit 1
+    Write-Host "📥 Downloading from GitHub..." -ForegroundColor Cyan
+    
+    $tempZip = Join-Path $env:TEMP "promptmaster-extension.zip"
+    $tempFolder = Join-Path $env:TEMP "promptmaster-temp"
+    
+    try {
+        # Download from GitHub
+        $downloadUrl = "https://github.com/Thoai900/project-folder--1-/archive/refs/heads/main.zip"
+        Write-Host "   Downloading: $downloadUrl" -ForegroundColor Gray
+        
+        # Tạo WebClient
+        $webClient = New-Object System.Net.WebClient
+        $webClient.DownloadFile($downloadUrl, $tempZip)
+        
+        Write-Host "✓ Download complete" -ForegroundColor Green
+        
+        # Extract zip
+        Write-Host "   Extracting files..." -ForegroundColor Gray
+        if (Test-Path $tempFolder) {
+            Remove-Item $tempFolder -Recurse -Force
+        }
+        Expand-Archive -Path $tempZip -DestinationPath $tempFolder -Force
+        
+        # Copy extension folder
+        $sourceExtension = Get-ChildItem -Path $tempFolder -Filter "extension" -Recurse | Select-Object -First 1
+        if ($sourceExtension) {
+            Copy-Item -Path $sourceExtension.FullName -Destination $extensionPath -Recurse -Force
+            Write-Host "✓ Extension folder copied" -ForegroundColor Green
+        } else {
+            throw "Could not find extension folder in download"
+        }
+        
+        # Cleanup
+        Remove-Item $tempZip -Force -ErrorAction SilentlyContinue
+        Remove-Item $tempFolder -Recurse -Force -ErrorAction SilentlyContinue
+        
+    } catch {
+        Write-Host "❌ Failed to download: $_" -ForegroundColor Red
+        Write-Host ""
+        Write-Host "📋 Alternative: Download manually from" -ForegroundColor Yellow
+        Write-Host "   https://github.com/Thoai900/project-folder--1-/archive/refs/heads/main.zip" -ForegroundColor White
+        Write-Host ""
+        Write-Host "   Then extract and run this script again" -ForegroundColor Gray
+        Write-Host ""
+        Read-Host "Press Enter to exit"
+        exit 1
+    }
 }
 
-if (-not (Test-Path $manifestPath)) {
-    Write-Host "❌ Không tìm thấy manifest.json!" -ForegroundColor Red
-    Write-Host ""
-    Read-Host "Nhấn Enter để thoát"
-    exit 1
-}
-
-Write-Host "✓ Thư mục extension tìm thấy" -ForegroundColor Green
+Write-Host "✓ Extension folder found" -ForegroundColor Green
+Write-Host "   Path: $extensionPath" -ForegroundColor Gray
 Write-Host ""
 
+# Verify manifest.json exists
+if (-not (Test-Path $manifestPath)) {
+    Write-Host "❌ manifest.json not found in extension folder!" -ForegroundColor Red
+    Write-Host ""
+    Read-Host "Press Enter to exit"
+    exit 1
+}
+
 # Tìm Chrome/Edge
-Write-Host "🔍 Tìm Chrome/Edge..." -ForegroundColor Yellow
+Write-Host "🔍 Finding Chrome/Edge..." -ForegroundColor Yellow
 
 $chromePath = $null
 $browserType = $null
@@ -69,18 +116,18 @@ foreach ($item in $paths) {
 }
 
 if (-not $chromePath) {
-    Write-Host "❌ Không tìm thấy Chrome hoặc Edge!" -ForegroundColor Red
-    Write-Host "Vui lòng cài đặt Chrome hoặc Edge trước" -ForegroundColor Yellow
+    Write-Host "❌ Chrome or Edge not found!" -ForegroundColor Red
+    Write-Host "Please install Chrome or Edge first" -ForegroundColor Yellow
     Write-Host ""
-    Read-Host "Nhấn Enter để thoát"
+    Read-Host "Press Enter to exit"
     exit 1
 }
 
-Write-Host "✓ Tìm thấy $browserType" -ForegroundColor Green
+Write-Host "✓ Found: $browserType" -ForegroundColor Green
 Write-Host ""
 
 # Tìm extensions folder
-Write-Host "📂 Tìm Extensions folder..." -ForegroundColor Yellow
+Write-Host "📂 Finding Extensions folder..." -ForegroundColor Yellow
 
 if ($browserType -eq "Edge") {
     $extensionsPath = "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default\Extensions"
@@ -89,7 +136,7 @@ if ($browserType -eq "Edge") {
 }
 
 if (-not (Test-Path $extensionsPath)) {
-    Write-Host "   Tạo Extensions folder..." -ForegroundColor Gray
+    Write-Host "   Creating Extensions folder..." -ForegroundColor Gray
     New-Item -ItemType Directory -Path $extensionsPath -Force | Out-Null
 }
 
@@ -97,53 +144,57 @@ Write-Host "✓ Extensions folder: $extensionsPath" -ForegroundColor Green
 Write-Host ""
 
 # Copy extension
-Write-Host "📦 Copy extension files..." -ForegroundColor Yellow
+Write-Host "📦 Installing extension..." -ForegroundColor Yellow
 
 $destPath = Join-Path $extensionsPath "ai-prompt-refiner"
 
 if (Test-Path $destPath) {
-    Write-Host "   Xóa version cũ..." -ForegroundColor Gray
+    Write-Host "   Removing old version..." -ForegroundColor Gray
     Remove-Item -Path $destPath -Recurse -Force -ErrorAction SilentlyContinue
     Start-Sleep -Milliseconds 500
 }
 
 try {
-    Write-Host "   Copy files..." -ForegroundColor Gray
+    Write-Host "   Copying files..." -ForegroundColor Gray
     Copy-Item -Path $extensionPath -Destination $destPath -Recurse -Force -ErrorAction Stop
-    Write-Host "✓ Copy thành công!" -ForegroundColor Green
+    Write-Host "✓ Installation successful!" -ForegroundColor Green
+    Write-Host "   Location: $destPath" -ForegroundColor Gray
 } catch {
-    Write-Host "❌ Lỗi khi copy: $_" -ForegroundColor Red
+    Write-Host "❌ Installation failed: $_" -ForegroundColor Red
     Write-Host ""
-    Read-Host "Nhấn Enter để thoát"
+    Read-Host "Press Enter to exit"
     exit 1
 }
 
 Write-Host ""
 
 # Mở browser
-Write-Host "🌐 Mở $browserType Extensions page..." -ForegroundColor Yellow
-Write-Host ""
+Write-Host "🌐 Opening $browserType..." -ForegroundColor Yellow
 
 try {
     Start-Process -FilePath $chromePath -ArgumentList "chrome://extensions/" -ErrorAction SilentlyContinue
+    Write-Host "✓ Opening chrome://extensions/ in your browser" -ForegroundColor Green
     Start-Sleep -Seconds 2
 } catch {
-    Write-Host "⚠️  Không thể mở browser tự động" -ForegroundColor Yellow
-    Write-Host "Vui lòng mở thủ công: chrome://extensions/" -ForegroundColor White
+    Write-Host "⚠️  Could not open browser automatically" -ForegroundColor Yellow
+    Write-Host "Please open manually: chrome://extensions/" -ForegroundColor White
 }
 
+Write-Host ""
 Write-Host "======================================" -ForegroundColor Green
-Write-Host "   ✓ Cài đặt thành công!" -ForegroundColor Green
+Write-Host "   ✓ Installation Complete!" -ForegroundColor Green
 Write-Host "======================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "📋 Bước tiếp theo:" -ForegroundColor Cyan
-Write-Host "   1. Tìm 'AI Prompt Refiner' trong danh sách Extensions" -ForegroundColor White
-Write-Host "   2. Kiểm tra nó đã bật (toggled) chưa" -ForegroundColor White
-Write-Host "   3. Ghé ChatGPT, Gemini hoặc Claude để sử dụng!" -ForegroundColor White
+Write-Host "📋 Next Steps:" -ForegroundColor Cyan
+Write-Host "   1. Look for 'AI Prompt Refiner' in the Extensions list" -ForegroundColor White
+Write-Host "   2. Make sure it's ENABLED (toggle should be ON)" -ForegroundColor White
+Write-Host "   3. Visit ChatGPT, Gemini, or Claude to use it!" -ForegroundColor White
 Write-Host ""
-Write-Host "💡 Nếu không thấy tiện ích:" -ForegroundColor Yellow
-Write-Host "   - Reload trang Extensions (F5)" -ForegroundColor White
-Write-Host "   - Hoặc đóng và mở lại browser" -ForegroundColor White
+Write-Host "💡 Troubleshooting:" -ForegroundColor Yellow
+Write-Host "   - If you don't see the extension, refresh the page (F5)" -ForegroundColor White
+Write-Host "   - Close and reopen your browser completely" -ForegroundColor White
+Write-Host "   - Run this script again" -ForegroundColor White
 Write-Host ""
 
-Read-Host "Nhấn Enter để đóng cửa sổ này"
+Read-Host "Press Enter to close this window"
+
