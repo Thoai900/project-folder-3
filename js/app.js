@@ -2082,7 +2082,8 @@ function renderShowcase() {
 
             <!-- Prompt Engineering Section -->
             <div class="mb-24">
-                <div class="rounded-3xl p-10 md:p-16 border ${styles.border} bg-gradient-to-br from-indigo-900/20 to-purple-900/20 relative overflow-hidden">
+                <div class="rounded-3xl p-10 md:p-16 border ${styles.border} bg-gradient-to-br from-indigo-900/20 to-purple-900/20 relative overflow-hidden" style="background-image: url('images/Gemini_Generated_Image_kjo9sgkjo9sgkjo9.png'); background-size: cover; background-position: center; background-attachment: fixed;">
+                    <div class="absolute inset-0 bg-gradient-to-br from-indigo-900/60 to-purple-900/60 rounded-3xl"></div>
                     <div class="absolute top-0 left-0 w-96 h-96 bg-indigo-500/15 rounded-full blur-[120px]"></div>
                     <div class="absolute bottom-0 right-0 w-80 h-80 bg-purple-500/10 rounded-full blur-[100px]"></div>
                     
