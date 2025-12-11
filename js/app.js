@@ -575,7 +575,7 @@ function sendResetPasswordEmail(email, token) {
         token: token
     };
     
-    emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams)
+    emailjs.send('service_1nrvxhz', 'template_qrfjik7', templateParams)
         .then(response => {
             showToast('✓ Email reset password đã được gửi! Kiểm tra inbox của bạn.');
         })
@@ -622,13 +622,8 @@ function showResetPasswordModal(email, token, resetLink) {
             </div>
             
             <div class="rounded-lg bg-amber-500/10 border border-amber-500/30 p-4">
-                <p class="font-semibold text-amber-600 mb-2">⚙️ Setup EmailJS (tuỳ chọn):</p>
-                <p class="text-sm text-amber-600/80 mb-2">Để gửi email thật:</p>
-                <ol class="text-xs text-amber-600/80 space-y-1 list-decimal list-inside">
-                    <li>Tạo tài khoản EmailJS (emailjs.com)</li>
-                    <li>Thay YOUR_SERVICE_ID, YOUR_TEMPLATE_ID trong code</li>
-                    <li>Tạo email template có biến: to_email, reset_link</li>
-                </ol>
+                <p class="font-semibold text-amber-600 mb-2">⚙️ EmailJS đã được cấu hình!</p>
+                <p class="text-sm text-amber-600/80">Hệ thống sẽ tự động gửi email reset password tới người dùng.</p>
             </div>
             
             <div class="flex gap-3 pt-4 border-t ${styles.border}">
