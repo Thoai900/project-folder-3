@@ -3012,9 +3012,17 @@ function installExtension() {
                     <div class="flex items-start gap-3">
                         <div class="flex-shrink-0 w-8 h-8 rounded-full ${getColorClass('softBg')} flex items-center justify-center font-bold ${getColorClass('text')} text-sm">2</div>
                         <div class="flex-1">
-                            <p class="font-semibold ${styles.textPrimary} mb-1">Chạy file với PowerShell</p>
-                            <p class="${styles.textSecondary} text-sm mb-2">Nhấp chuột phải trên file <span class="font-mono bg-black/20 px-1.5 py-0.5 rounded text-xs">install-extension.ps1</span></p>
-                            <p class="${styles.textSecondary} text-sm">Chọn: <span class="font-bold">Run with PowerShell</span></p>
+                            <p class="font-semibold ${styles.textPrimary} mb-1">Chạy script PowerShell</p>
+                            <p class="${styles.textSecondary} text-sm mb-2">
+                                <strong>Cách 1 (Dễ nhất):</strong> Nhấp chuột phải trên file <span class="font-mono bg-black/20 px-1.5 py-0.5 rounded text-xs">install-extension.ps1</span>
+                            </p>
+                            <p class="${styles.textSecondary} text-sm mb-3">Chọn: <span class="font-bold">"Run with PowerShell ISE"</span></p>
+                            <p class="${styles.textSecondary} text-sm">
+                                <strong>Cách 2:</strong> Mở PowerShell tại thư mục chứa file, gõ:
+                            </p>
+                            <div class="bg-black/40 border border-white/10 rounded-lg p-2 font-mono text-xs text-emerald-400 mt-2 overflow-auto">
+.\\install-extension.ps1
+                            </div>
                         </div>
                     </div>
                 </div>

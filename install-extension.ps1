@@ -1,184 +1,149 @@
-# Script cài đặt Chrome Extension - AI Prompt Refiner
-# Yêu cầu: Chạy PowerShell as Administrator
+# AI Prompt Refiner Extension - Cài đặt tự động
+# 
+# Cách chạy:
+# Option 1: Right-click file -> Run with PowerShell ISE (Recommended)
+# Option 2: Mở PowerShell tại thư mục này gõ: .\install-extension.ps1
 
-param(
-    [switch]$LaunchChrome = $false
-)
-
+Write-Host ""
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host "  Cài đặt AI Prompt Refiner Extension" -ForegroundColor Cyan
 Write-Host "======================================" -ForegroundColor Cyan
 Write-Host ""
+Write-Host "Starting installation..." -ForegroundColor Gray
+Write-Host ""
 
-# Kiểm tra xem đang chạy as Administrator
-$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
-if (-not $isAdmin) {
-    Write-Host "⚠️  Lỗi: Script cần chạy với quyền Administrator!" -ForegroundColor Red
-    Write-Host "Vui lòng click chuột phải trên PowerShell và chọn 'Run as Administrator'" -ForegroundColor Yellow
-    Read-Host "Nhấn Enter để thoát"
-    exit
+# Pause để người dùng thấy script đang chạy
+Start-Sleep -Seconds 1
+
+# Lấy đường dẫn script folder
+$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+if ([string]::IsNullOrWhiteSpace($scriptPath)) {
+    $scriptPath = Get-Location
 }
 
-# Lấy đường dẫn extension
-$extensionPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$extensionPath = Join-Path $extensionPath "extension"
+Write-Host "📁 Kiểm tra thư mục extension..." -ForegroundColor Yellow
+Write-Host "   Thư mục: $scriptPath" -ForegroundColor Gray
+
+$extensionPath = Join-Path $scriptPath "extension"
 $manifestPath = Join-Path $extensionPath "manifest.json"
 
-Write-Host "📁 Kiểm tra thư mục extension..." -ForegroundColor Yellow
 if (-not (Test-Path $extensionPath)) {
-    Write-Host "❌ Không tìm thấy thư mục extension tại: $extensionPath" -ForegroundColor Red
+    Write-Host "❌ Không tìm thấy thư mục extension!" -ForegroundColor Red
+    Write-Host "   Kiểm tra: $extensionPath" -ForegroundColor Red
+    Write-Host ""
     Read-Host "Nhấn Enter để thoát"
-    exit
+    exit 1
 }
 
 if (-not (Test-Path $manifestPath)) {
-    Write-Host "❌ Không tìm thấy manifest.json trong thư mục extension" -ForegroundColor Red
+    Write-Host "❌ Không tìm thấy manifest.json!" -ForegroundColor Red
+    Write-Host ""
     Read-Host "Nhấn Enter để thoát"
-    exit
+    exit 1
 }
 
-Write-Host "✅ Thư mục extension tìm thấy" -ForegroundColor Green
-Write-Host "   Đường dẫn: $extensionPath" -ForegroundColor Gray
-
-# Tìm đường dẫn Chrome
+Write-Host "✓ Thư mục extension tìm thấy" -ForegroundColor Green
 Write-Host ""
-Write-Host "🔍 Tìm Chrome installation..." -ForegroundColor Yellow
+
+# Tìm Chrome/Edge
+Write-Host "🔍 Tìm Chrome/Edge..." -ForegroundColor Yellow
 
 $chromePath = $null
-$possiblePaths = @(
-    "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
-    "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
-    "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
+$browserType = $null
+
+$paths = @(
+    @{ Path = "$env:ProgramFiles\Google\Chrome\Application\chrome.exe"; Type = "Chrome" },
+    @{ Path = "$env:ProgramFiles(x86)\Google\Chrome\Application\chrome.exe"; Type = "Chrome" },
+    @{ Path = "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"; Type = "Chrome" },
+    @{ Path = "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe"; Type = "Edge" },
+    @{ Path = "$env:ProgramFiles(x86)\Microsoft\Edge\Application\msedge.exe"; Type = "Edge" },
+    @{ Path = "$env:LOCALAPPDATA\Microsoft\Edge\Application\msedge.exe"; Type = "Edge" }
 )
 
-foreach ($path in $possiblePaths) {
-    if (Test-Path $path) {
-        $chromePath = $path
+foreach ($item in $paths) {
+    if (Test-Path $item.Path) {
+        $chromePath = $item.Path
+        $browserType = $item.Type
         break
     }
 }
 
 if (-not $chromePath) {
-    Write-Host "❌ Không tìm thấy Chrome trên máy tính" -ForegroundColor Red
-    Write-Host "Vui lòng cài đặt Chrome hoặc Edge trước khi chạy script này" -ForegroundColor Yellow
+    Write-Host "❌ Không tìm thấy Chrome hoặc Edge!" -ForegroundColor Red
+    Write-Host "Vui lòng cài đặt Chrome hoặc Edge trước" -ForegroundColor Yellow
+    Write-Host ""
     Read-Host "Nhấn Enter để thoát"
-    exit
+    exit 1
 }
 
-Write-Host "✅ Tìm thấy Chrome tại: $chromePath" -ForegroundColor Green
-
-# Tìm Chrome Extensions folder
+Write-Host "✓ Tìm thấy $browserType" -ForegroundColor Green
 Write-Host ""
-Write-Host "📂 Thiết lập thư mục extensions..." -ForegroundColor Yellow
 
-$chromeExtensionsPath = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Extensions"
-$edgeExtensionsPath = "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default\Extensions"
+# Tìm extensions folder
+Write-Host "📂 Tìm Extensions folder..." -ForegroundColor Yellow
 
-# Hỏi người dùng cài đặt cho Chrome hay Edge
-$installChoice = Read-Host "Cài đặt cho [C]hrome hay [E]dge? (C/E, mặc định là Chrome)"
-if ($installChoice -eq "E" -or $installChoice -eq "e") {
-    $extensionsBasePath = $edgeExtensionsPath
-    $browser = "Edge"
+if ($browserType -eq "Edge") {
+    $extensionsPath = "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default\Extensions"
 } else {
-    $extensionsBasePath = $chromeExtensionsPath
-    $browser = "Chrome"
+    $extensionsPath = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Extensions"
 }
 
-if (-not (Test-Path $extensionsBasePath)) {
-    Write-Host "❌ Không tìm thấy thư mục Extensions của $browser" -ForegroundColor Red
-    Write-Host "   Vui lòng mở $browser ít nhất một lần trước khi chạy script này" -ForegroundColor Yellow
+if (-not (Test-Path $extensionsPath)) {
+    Write-Host "   Tạo Extensions folder..." -ForegroundColor Gray
+    New-Item -ItemType Directory -Path $extensionsPath -Force | Out-Null
+}
+
+Write-Host "✓ Extensions folder: $extensionsPath" -ForegroundColor Green
+Write-Host ""
+
+# Copy extension
+Write-Host "📦 Copy extension files..." -ForegroundColor Yellow
+
+$destPath = Join-Path $extensionsPath "ai-prompt-refiner"
+
+if (Test-Path $destPath) {
+    Write-Host "   Xóa version cũ..." -ForegroundColor Gray
+    Remove-Item -Path $destPath -Recurse -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 500
+}
+
+try {
+    Write-Host "   Copy files..." -ForegroundColor Gray
+    Copy-Item -Path $extensionPath -Destination $destPath -Recurse -Force -ErrorAction Stop
+    Write-Host "✓ Copy thành công!" -ForegroundColor Green
+} catch {
+    Write-Host "❌ Lỗi khi copy: $_" -ForegroundColor Red
+    Write-Host ""
     Read-Host "Nhấn Enter để thoát"
-    exit
-}
-
-Write-Host "✅ Thư mục Extensions tìm thấy" -ForegroundColor Green
-
-# Đọc manifest để lấy extension ID
-Write-Host ""
-Write-Host "📋 Đọc thông tin extension..." -ForegroundColor Yellow
-
-$manifest = Get-Content $manifestPath | ConvertFrom-Json
-$extensionName = $manifest.name
-$extensionVersion = $manifest.version
-
-Write-Host "   Tên: $extensionName" -ForegroundColor Gray
-Write-Host "   Version: $extensionVersion" -ForegroundColor Gray
-
-# Tạo extension ID dựa trên content (hash của manifest)
-# Trong thực tế, Chrome tạo ID dựa trên public key, nhưng cách đơn giản là dùng hash
-$manifestContent = Get-Content $manifestPath -Raw
-$hashObject = [System.Security.Cryptography.MD5]::Create()
-$hash = [System.BitConverter]::ToString($hashObject.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($manifestContent))) -replace '-',''
-$extensionId = $hash.Substring(0, 32).ToLower()
-
-# Tuy nhiên, nếu extension đã được load developer mode, Chrome sẽ tạo ID khác
-# Chúng ta sẽ copy vào 1 thư mục temp và để Chrome load nó
-$tempExtensionPath = "$env:TEMP\PromptMaster_Extension_Temp"
-if (Test-Path $tempExtensionPath) {
-    Remove-Item -Path $tempExtensionPath -Recurse -Force
+    exit 1
 }
 
 Write-Host ""
-Write-Host "📦 Chuẩn bị cài đặt..." -ForegroundColor Yellow
 
-# Copy extension vào temp folder
-Copy-Item -Path $extensionPath -Destination $tempExtensionPath -Recurse
-Write-Host "✅ Extension đã được sao chép" -ForegroundColor Green
-
-# Đóng Chrome nếu đang chạy
+# Mở browser
+Write-Host "🌐 Mở $browserType Extensions page..." -ForegroundColor Yellow
 Write-Host ""
-Write-Host "🔄 Chuẩn bị Chrome..." -ForegroundColor Yellow
-$processName = if ($browser -eq "Edge") { "msedge" } else { "chrome" }
-$runningProcesses = Get-Process -Name $processName -ErrorAction SilentlyContinue
 
-if ($runningProcesses) {
-    Write-Host "   $browser đang chạy, đóng lại..." -ForegroundColor Yellow
-    Stop-Process -Name $processName -Force -ErrorAction SilentlyContinue
+try {
+    Start-Process -FilePath $chromePath -ArgumentList "chrome://extensions/" -ErrorAction SilentlyContinue
     Start-Sleep -Seconds 2
+} catch {
+    Write-Host "⚠️  Không thể mở browser tự động" -ForegroundColor Yellow
+    Write-Host "Vui lòng mở thủ công: chrome://extensions/" -ForegroundColor White
 }
 
-# Tạo registry entry để enable developer mode (optional, giúp extension không bị cảnh báo)
-Write-Host "🔐 Cài đặt quyền extensions..." -ForegroundColor Yellow
-
-$regPath = "HKLM:\Software\Policies\Google\Chrome\ExtensionInstallForcelist"
-if (-not (Test-Path $regPath)) {
-    New-Item -Path $regPath -Force -ErrorAction SilentlyContinue | Out-Null
-}
-
-# Hướng dẫn cuối cùng
-Write-Host ""
 Write-Host "======================================" -ForegroundColor Green
-Write-Host "  ✅ Chuẩn bị hoàn tất!" -ForegroundColor Green
+Write-Host "   ✓ Cài đặt thành công!" -ForegroundColor Green
 Write-Host "======================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "🎯 Bước tiếp theo:" -ForegroundColor Cyan
-Write-Host "  1. Mở $browser" -ForegroundColor White
-Write-Host "  2. Nhập vào address bar: chrome://extensions/" -ForegroundColor White
-Write-Host "  3. Bật 'Developer mode' (nút bên phải trên cùng)" -ForegroundColor White
-Write-Host "  4. Nhấp 'Load unpacked' và chọn thư mục:" -ForegroundColor White
-Write-Host "     $extensionPath" -ForegroundColor Yellow
+Write-Host "📋 Bước tiếp theo:" -ForegroundColor Cyan
+Write-Host "   1. Tìm 'AI Prompt Refiner' trong danh sách Extensions" -ForegroundColor White
+Write-Host "   2. Kiểm tra nó đã bật (toggled) chưa" -ForegroundColor White
+Write-Host "   3. Ghé ChatGPT, Gemini hoặc Claude để sử dụng!" -ForegroundColor White
 Write-Host ""
-Write-Host "📋 Copy đường dẫn extension?" -ForegroundColor Cyan
-Write-Host $extensionPath | Set-Clipboard
-Write-Host "✅ Đã sao chép vào clipboard!" -ForegroundColor Green
+Write-Host "💡 Nếu không thấy tiện ích:" -ForegroundColor Yellow
+Write-Host "   - Reload trang Extensions (F5)" -ForegroundColor White
+Write-Host "   - Hoặc đóng và mở lại browser" -ForegroundColor White
 Write-Host ""
 
-# Mở Chrome extensions page
-Write-Host "🌐 Mở trang Extensions trong $browser..." -ForegroundColor Yellow
-$launchArgs = "chrome://extensions/"
-if ($browser -eq "Edge") {
-    $chromePath = (Get-Command msedge -ErrorAction SilentlyContinue).Source
-    if (-not $chromePath) {
-        $chromePath = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
-    }
-}
-
-Start-Process -FilePath $chromePath -ArgumentList $launchArgs -ErrorAction SilentlyContinue
-
-Write-Host ""
-Write-Host "💡 Mẹo: Bạn cũng có thể dùng batch file không cần Administrator:" -ForegroundColor Gray
-Write-Host "   Tìm thư mục extension và tay copy vào đây:" -ForegroundColor Gray
-Write-Host "   $extensionsBasePath" -ForegroundColor Gray
-Write-Host ""
-
-Read-Host "Nhấn Enter khi hoàn tất"
+Read-Host "Nhấn Enter để đóng cửa sổ này"
