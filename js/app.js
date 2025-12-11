@@ -1365,6 +1365,12 @@ function renderHeader() {
         `;
     };
 
+    const themeToggle = `
+        <button onclick="toggleTheme()" class="p-2.5 rounded-full border ${styles.border} ${styles.iconBg} hover:border-indigo-400 hover:text-indigo-300 transition-all shadow-sm" aria-label="Đổi giao diện sáng/tối">
+            <i data-lucide="${state.theme === 'dark' ? 'sun' : 'moon'}" size="18"></i>
+        </button>
+    `;
+
     return `
         <header class="relative z-40 w-full">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 flex items-center gap-4">
@@ -1385,6 +1391,7 @@ function renderHeader() {
                 </div>
 
                 <div class="flex items-center gap-3 ml-auto">
+                    ${themeToggle}
                     ${userSectionHTML}
                 </div>
             </div>
