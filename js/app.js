@@ -2079,7 +2079,74 @@ function renderShowcase() {
                     <p class="text-xl ${styles.textSecondary} max-w-2xl mx-auto mb-10 leading-relaxed">Khám phá và so sánh sức mạnh của những mô hình ngôn ngữ lớn (LLM) hàng đầu thế giới.</p>
                 </div>
             </div>
-            
+
+            <!-- Prompt Engineering Section -->
+            <div class="mb-24">
+                <div class="rounded-3xl p-10 md:p-16 border ${styles.border} bg-gradient-to-br from-indigo-900/20 to-purple-900/20 relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-96 h-96 bg-indigo-500/15 rounded-full blur-[120px]"></div>
+                    <div class="absolute bottom-0 right-0 w-80 h-80 bg-purple-500/10 rounded-full blur-[100px]"></div>
+                    
+                    <div class="relative z-10">
+                        <div class="text-center mb-12">
+                            <h3 class="text-4xl md:text-5xl font-black bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-4">
+                                ✨ Prompt Engineering - Chìa khóa AI
+                            </h3>
+                            <p class="text-lg ${styles.textSecondary} max-w-3xl mx-auto">
+                                Trong thời đại AI, cách bạn <span class="text-indigo-400 font-bold">đặt câu hỏi</span> quyết định chất lượng câu trả lời. Prompt tốt = Kết quả tuyệt vời.
+                            </p>
+                        </div>
+
+                        <div class="grid md:grid-cols-3 gap-6 mb-12">
+                            <div class="${styles.cardBg} p-8 rounded-2xl border ${styles.border} hover:border-indigo-500/50 transition-all">
+                                <div class="text-4xl mb-4">🎯</div>
+                                <h4 class="text-xl font-bold ${styles.textPrimary} mb-3">Specificity (Cụ thể)</h4>
+                                <p class="${styles.textSecondary} text-sm">Prompt càng chi tiết, AI hiểu ý bạn càng tốt. Thay vì "Viết về AI" hãy "Viết bài 1000 từ về ứng dụng AI trong y tế"</p>
+                            </div>
+                            
+                            <div class="${styles.cardBg} p-8 rounded-2xl border ${styles.border} hover:border-purple-500/50 transition-all">
+                                <div class="text-4xl mb-4">🎨</div>
+                                <h4 class="text-xl font-bold ${styles.textPrimary} mb-3">Context (Bối cảnh)</h4>
+                                <p class="${styles.textSecondary} text-sm">Cung cấp thông tin nền tảng giúp AI hiểu rõ nội dung. "Tôi là một người mới bắt đầu lập trình, giải thích React cho tôi"</p>
+                            </div>
+
+                            <div class="${styles.cardBg} p-8 rounded-2xl border ${styles.border} hover:border-pink-500/50 transition-all">
+                                <div class="text-4xl mb-4">🔄</div>
+                                <h4 class="text-xl font-bold ${styles.textPrimary} mb-3">Iteration (Cải tiến)</h4>
+                                <p class="${styles.textSecondary} text-sm">Tinh chỉnh lại prompt dựa trên kết quả. Kết quả chưa ưng ý? Hãy điều chỉnh và thử lại ngay!</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-2xl p-8 mb-12">
+                            <h4 class="text-xl font-bold ${styles.textPrimary} mb-4 flex items-center gap-2">
+                                <i data-lucide="lightbulb" class="text-yellow-400" size="24"></i>
+                                Ví dụ: Prompt tồi vs Prompt tốt
+                            </h4>
+                            <div class="grid md:grid-cols-2 gap-6">
+                                <div class="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+                                    <p class="text-sm font-bold text-red-400 mb-2">❌ Prompt Tồi:</p>
+                                    <p class="${styles.textSecondary} text-sm italic">"Giải thích machine learning"</p>
+                                </div>
+                                <div class="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                                    <p class="text-sm font-bold text-green-400 mb-2">✅ Prompt Tốt:</p>
+                                    <p class="${styles.textSecondary} text-sm italic">"Giải thích machine learning cho một người không có background về toán học. Sử dụng ví dụ thực tế từ đời sống hàng ngày. Tập trung vào các thuật toán phổ biến như Linear Regression, Decision Tree."</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <h4 class="text-2xl font-bold ${styles.textPrimary} mb-6">Muốn tinh chỉnh Prompt nhanh hơn?</h4>
+                            <button onclick="installExtension()" class="px-8 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold transition-all transform hover:scale-105 active:scale-95 flex items-center gap-3 mx-auto shadow-lg hover:shadow-xl">
+                                <i data-lucide="download" size="20"></i>
+                                Cài đặt Extension Tinh chỉnh Prompt
+                            </button>
+                            <p class="text-sm ${styles.textSecondary} mt-4">
+                                🚀 Cài đặt miễn phí trên Chrome. Tinh chỉnh prompt ngay trên ChatGPT, Gemini, Claude!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-24">
                 ${AI_TOOLS.map(tool => `
                     <div class="${styles.cardBg} rounded-3xl p-8 border ${styles.border} hover:border-indigo-500/30 transition-all duration-500 hover:-translate-y-2 group relative overflow-hidden shadow-sm hover:shadow-xl">
@@ -3114,6 +3181,75 @@ function renderShareModal(container) {
             </div>
         </div>
     `;
+}
+
+// Install Extension Function
+function installExtension() {
+    const userAgent = navigator.userAgent.toLowerCase();
+    
+    // Detect browser
+    if (userAgent.includes('chrome') && !userAgent.includes('edg')) {
+        // Chrome browser
+        showToast('📖 Hướng dẫn cài đặt được hiển thị dưới đây', 'info');
+        
+        const instructionHTML = `
+            <div class="text-center p-8">
+                <h3 class="text-2xl font-bold text-indigo-600 mb-6">Cài đặt AI Prompt Refiner Extension</h3>
+                
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 text-left rounded">
+                    <p class="font-bold text-blue-900 mb-2">📝 Các bước cài đặt:</p>
+                    <ol class="list-decimal list-inside text-sm text-blue-800 space-y-2">
+                        <li>Mở Chrome và vào: <code class="bg-white px-2 py-1 rounded">chrome://extensions/</code></li>
+                        <li>Bật <strong>Developer mode</strong> (toggle góc trên bên phải)</li>
+                        <li>Click <strong>"Load unpacked"</strong></li>
+                        <li>Chọn thư mục <code class="bg-white px-2 py-1 rounded">extension</code> từ GitHub repo</li>
+                        <li>✨ Hoàn thành! Extension sẽ xuất hiện trên toolbar</li>
+                    </ol>
+                </div>
+
+                <div class="bg-green-50 border-l-4 border-green-500 p-4 text-left rounded">
+                    <p class="font-bold text-green-900 mb-2">🚀 Sau khi cài đặt:</p>
+                    <ul class="list-disc list-inside text-sm text-green-800 space-y-1">
+                        <li>Vào ChatGPT, Gemini, Claude</li>
+                        <li>Nhập prompt vào textarea</li>
+                        <li>Click nút tím <strong>"Tinh chỉnh"</strong> hoặc nhấn <strong>Ctrl+Shift+R</strong></li>
+                        <li>Xem prompt được cải thiện tự động! ✨</li>
+                    </ul>
+                </div>
+
+                <p class="text-gray-600 text-sm mt-6">
+                    👉 Lấy extension từ: 
+                    <a href="https://github.com/Thoai900/project-folder--1-" target="_blank" class="text-indigo-600 font-bold hover:underline">GitHub Repository</a>
+                </p>
+            </div>
+        `;
+        
+        // Create modal
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4';
+        modal.innerHTML = `
+            <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-gray-800"></h2>
+                    <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-800">
+                        <i data-lucide="x" size="24"></i>
+                    </button>
+                </div>
+                <div class="p-8">
+                    ${instructionHTML}
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        lucide.createIcons();
+    } else if (userAgent.includes('firefox')) {
+        showToast('🔜 Firefox support coming soon!', 'warning');
+    } else if (userAgent.includes('safari')) {
+        showToast('🔜 Safari support coming soon!', 'warning');
+    } else {
+        showToast('⚠️ Vui lòng sử dụng Chrome để cài đặt extension này!', 'warning');
+    }
 }
 
 window.onload = () => {
