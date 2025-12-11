@@ -2142,10 +2142,10 @@ function renderShowcase() {
                         <h3 class="text-3xl font-black mb-3">Tinh chỉnh Prompt siêu nhanh</h3>
                         <p class="text-white/80 mb-6 text-sm leading-relaxed">Một cú nhấp để cài đặt tiện ích AI Prompt Refiner. Tích hợp trực tiếp vào khung nhập ChatGPT, Gemini, Claude… và tối ưu prompt tức thì.</p>
                         <div class="flex flex-wrap gap-3">
-                            <a href="extension/README.md" target="_blank" class="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white text-indigo-700 font-semibold shadow-lg hover:shadow-xl transition-all duration-200">
+                            <button onclick="installExtension()" class="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white text-indigo-700 font-semibold shadow-lg hover:shadow-xl transition-all duration-200">
                                 <i data-lucide="download" size="18"></i>
                                 Cài tiện ích tinh chỉnh
-                            </a>
+                            </button>
                             <a href="SETUP_GUIDE.md" target="_blank" class="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white/10 border border-white/30 text-white font-semibold hover:bg-white/15 transition-all duration-200">
                                 <i data-lucide="book-open" size="18"></i>
                                 Xem hướng dẫn nhanh
@@ -2696,6 +2696,237 @@ function setSubject(sub) {
 
 // ==========================================
 // INITIALIZATION
+// ==========================================
+// EXTENSION INSTALLATION
+// ==========================================
+function downloadInstallScript() {
+    const batContent = `@echo off
+chcp 65001 >nul
+setlocal enabledelayedexpansion
+
+echo.
+echo ======================================
+echo   Cài đặt AI Prompt Refiner Extension
+echo ======================================
+echo.
+
+:: Kiểm tra Administrator
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+    echo ⚠️  Lỗi: Script cần quyền Administrator!
+    echo.
+    echo Vui lòng right-click file này và chọn "Run as Administrator"
+    echo.
+    pause
+    exit /b 1
+)
+
+echo ✓ Chạy với quyền Administrator
+echo.
+
+:: Lấy đường dẫn script folder
+cd /d "%~dp0"
+set "extensionPath=%cd%\\extension"
+set "manifestPath=%extensionPath%\\manifest.json"
+
+echo 📁 Kiểm tra thư mục extension...
+if not exist "%extensionPath%" (
+    echo ❌ Không tìm thấy thư mục extension!
+    echo    Kiểm tra: %extensionPath%
+    echo.
+    pause
+    exit /b 1
+)
+
+if not exist "%manifestPath%" (
+    echo ❌ Không tìm thấy manifest.json!
+    echo.
+    pause
+    exit /b 1
+)
+
+echo ✓ Tìm thấy extension tại: %extensionPath%
+echo.
+
+:: Tìm Chrome
+echo 🔍 Tìm Chrome installation...
+set "chromePath="
+
+if exist "%ProgramFiles%\\Google\\Chrome\\Application\\chrome.exe" (
+    set "chromePath=%ProgramFiles%\\Google\\Chrome\\Application\\chrome.exe"
+    set "browserType=Chrome"
+) else if exist "%ProgramFiles(x86)%\\Google\\Chrome\\Application\\chrome.exe" (
+    set "chromePath=%ProgramFiles(x86)%\\Google\\Chrome\\Application\\chrome.exe"
+    set "browserType=Chrome"
+) else if exist "%LocalAppData%\\Google\\Chrome\\Application\\chrome.exe" (
+    set "chromePath=%LocalAppData%\\Google\\Chrome\\Application\\chrome.exe"
+    set "browserType=Chrome"
+) else if exist "%ProgramFiles%\\Microsoft\\Edge\\Application\\msedge.exe" (
+    set "chromePath=%ProgramFiles%\\Microsoft\\Edge\\Application\\msedge.exe"
+    set "browserType=Edge"
+) else if exist "%ProgramFiles(x86)%\\Microsoft\\Edge\\Application\\msedge.exe" (
+    set "chromePath=%ProgramFiles(x86)%\\Microsoft\\Edge\\Application\\msedge.exe"
+    set "browserType=Edge"
+) else if exist "%LocalAppData%\\Microsoft\\Edge\\Application\\msedge.exe" (
+    set "chromePath=%LocalAppData%\\Microsoft\\Edge\\Application\\msedge.exe"
+    set "browserType=Edge"
+)
+
+if not defined chromePath (
+    echo ❌ Không tìm thấy Chrome hoặc Edge!
+    echo.
+    pause
+    exit /b 1
+)
+
+echo ✓ Tìm thấy %browserType% tại: %chromePath%
+echo.
+
+:: Tìm extensions folder
+echo 📂 Tìm thư mục extensions...
+set "extensionsPath=%LocalAppData%\\Google\\Chrome\\User Data\\Default\\Extensions"
+
+if %browserType%==Edge (
+    set "extensionsPath=%LocalAppData%\\Microsoft\\Edge\\User Data\\Default\\Extensions"
+)
+
+if not exist "%extensionsPath%" (
+    echo ⚠️  Tạo thư mục extensions...
+    mkdir "%extensionsPath%"
+)
+
+echo ✓ Extensions folder: %extensionsPath%
+echo.
+
+:: Copy extension
+echo 📦 Copy extension files...
+set "destPath=%extensionsPath%\\ai-prompt-refiner"
+
+if exist "%destPath%" (
+    echo   Xóa version cũ...
+    rmdir /s /q "%destPath%"
+)
+
+echo   Copy files...
+xcopy "%extensionPath%" "%destPath%" /E /I /Y >nul
+
+if %errorlevel% neq 0 (
+    echo ❌ Lỗi khi copy files!
+    echo.
+    pause
+    exit /b 1
+)
+
+echo ✓ Copy thành công!
+echo.
+
+:: Mở Chrome Extensions page
+echo 🌐 Mở Chrome Extensions page...
+echo.
+start "" "%chromePath%" "chrome://extensions/"
+
+echo.
+echo ======================================
+echo   ✓ Cài đặt thành công!
+echo ======================================
+echo.
+echo 📋 Bước tiếp theo:
+echo   1. Bạn sẽ thấy trang Extensions mở ra
+echo   2. Tìm "AI Prompt Refiner" trong danh sách
+echo   3. Kiểm tra xem nó đã bật (enabled) hay chưa
+echo.
+echo 💡 Nếu bạn không thấy extension:
+echo   - Reload trang (F5)
+echo   - Hoặc đóng Chrome và chạy lại script này
+echo.
+pause`;
+
+    const element = document.createElement('a');
+    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(batContent));
+    element.setAttribute('download', 'install-extension.bat');
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+    showToast('Đã tải file install-extension.bat!');
+}
+
+function installExtension() {
+    const styles = getStyles();
+    const modalContent = document.getElementById('modal-body');
+    
+    modalContent.innerHTML = `
+        <div class="p-8 space-y-6">
+            <div class="text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl ${getColorClass('softBg')} mb-4">
+                    <i data-lucide="zap" size="32" class="${getColorClass('text')}"></i>
+                </div>
+                <h2 class="text-3xl font-black ${styles.textPrimary} mb-2">Cài Tiện ích Ngay Bây Giờ</h2>
+                <p class="${styles.textSecondary} text-sm">Chỉ 2 bước đơn giản, không cần phức tạp</p>
+            </div>
+
+            <div class="space-y-4">
+                <div class="rounded-lg ${styles.inputBg} border ${styles.border} p-4">
+                    <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0 w-8 h-8 rounded-full ${getColorClass('softBg')} flex items-center justify-center font-bold ${getColorClass('text')} text-sm">1</div>
+                        <div class="flex-1">
+                            <p class="font-semibold ${styles.textPrimary} mb-1">Tải file cài đặt</p>
+                            <p class="${styles.textSecondary} text-sm mb-3">Nhấp nút dưới để tải file install-extension.bat</p>
+                            <button onclick="downloadInstallScript()" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg ${getColorClass('bg')} hover:opacity-90 text-white font-semibold text-sm transition-all">
+                                <i data-lucide="download" size="16"></i>
+                                Tải install-extension.bat
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-lg ${styles.inputBg} border ${styles.border} p-4">
+                    <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0 w-8 h-8 rounded-full ${getColorClass('softBg')} flex items-center justify-center font-bold ${getColorClass('text')} text-sm">2</div>
+                        <div class="flex-1">
+                            <p class="font-semibold ${styles.textPrimary} mb-1">Chạy file with Administrator</p>
+                            <p class="${styles.textSecondary} text-sm">Nhấp chuột phải trên file install-extension.bat → Chọn <span class="font-mono bg-black/20 px-1.5 py-0.5 rounded text-xs">"Run as Administrator"</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-lg bg-green-500/10 border border-green-500/30 p-4">
+                <div class="flex gap-3">
+                    <i data-lucide="check-circle" size="20" class="text-green-500 flex-shrink-0 mt-0.5"></i>
+                    <div>
+                        <p class="font-semibold text-green-600">Hoàn tất!</p>
+                        <p class="text-sm text-green-600/80 mt-1">Trình duyệt sẽ mở trang Extensions. Bạn sẽ thấy "AI Prompt Refiner" đã được cài. Đó là xong! Ghé ChatGPT, Gemini hoặc Claude để sử dụng</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-lg bg-blue-500/10 border border-blue-500/30 p-4">
+                <div class="flex gap-3">
+                    <i data-lucide="info" size="20" class="text-blue-500 flex-shrink-0 mt-0.5"></i>
+                    <div>
+                        <p class="font-semibold text-blue-600">💡 Mẹo</p>
+                        <p class="text-sm text-blue-600/80 mt-1">Nếu không thấy tiện ích, reload trang Extensions (F5) hoặc chạy lại file .bat</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3 pt-4 border-t ${styles.border}">
+                <button onclick="closeModal()" class="flex-1 py-3 rounded-xl border ${styles.border} ${styles.textPrimary} hover:bg-white/5 font-bold transition-all">
+                    Đóng
+                </button>
+                <button onclick="window.open('extension/README.md', '_blank')" class="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="book-open" size="16"></i>
+                    Chi tiết thêm
+                </button>
+            </div>
+        </div>
+    `;
+    
+    openModal();
+    lucide.createIcons();
+}
+
 // ==========================================
 // KEYBOARD SHORTCUTS
 // ==========================================
