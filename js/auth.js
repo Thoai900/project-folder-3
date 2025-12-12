@@ -398,5 +398,287 @@ async function sharePromptWithFriends(userId, friendIds, promptData) {
         return { success: false, error: error.message };
     }
 }
+/**
+ * Gửi email verification (magic link) để đăng nhập
+ * @param {string} email - Email người dùng
+ * @param {Object} actionCodeSettings - Cấu hình email action
+ * @returns {Promise}
+ */
+async function sendEmailVerification(email) {
+    try {
+        const actionCodeSettings = {
+            url: `${window.location.origin}?email=${encodeURIComponent(email)}`,
+            handleCodeInApp: true
+        };
+        
+        await window.firebaseSendSignInLinkToEmail(window.firebaseAuth, email, actionCodeSettings);
+        
+        // Lưu email vào localStorage để xác minh sau
+        window.localStorage.setItem('emailForSignIn', email);
+        
+        console.log('✅ Email xác minh đã được gửi.');
+        showToast('✓ Email xác minh đã được gửi! Kiểm tra hộp thư của bạn.');
+        return { success: true };
+    } catch (error) {
+        console.error('❌ Lỗi gửi email xác minh:', error.message);
+        
+        let errorMsg = 'Không thể gửi email xác minh.';
+        
+        if (error.code === 'auth/invalid-email') {
+            errorMsg = 'Email không hợp lệ.';
+        } else if (error.code === 'auth/missing-email') {
+            errorMsg = 'Vui lòng nhập email.';
+        }
+        
+        showToast(`❌ ${errorMsg}`);
+        return { success: false, error: error.message };
+    }
+}
 
+/**
+ * Đăng nhập bằng email verification link
+ * @param {string} email - Email người dùng
+ * @param {string} name - Tên người dùng
+ * @param {string} userType - Loại người dùng (student/teacher)
+ * @returns {Promise}
+ */
+async function signInWithEmailLink(email, name, userType = 'student') {
+    try {
+        // Kiểm tra xem đây có phải là email verification link không
+        if (window.firebaseAuth.isSignInWithEmailLink(window.location.href)) {
+            // Đăng nhập người dùng
+            const userCredential = await window.firebaseAuth.signInWithEmailLink(email, window.location.href);
+            const user = userCredential.user;
+            const userId = user.uid;
+            
+            // Xóa email khỏi localStorage
+            window.localStorage.removeItem('emailForSignIn');
+            
+            // Kiểm tra xem người dùng có tồn tại không
+            const userRef = window.firebaseRef(window.firebaseDB, `users/${userId}`);
+            const snapshot = await window.firebaseGet(userRef);
+            
+            // Nếu người dùng mới, tạo profile
+            if (!snapshot.exists()) {
+                await window.firebaseSet(userRef, {
+                    id: userId,
+                    email: email,
+                    name: name || email.split('@')[0],
+                    userType: userType,
+                    createdAt: new Date().toISOString(),
+                    lastLogin: new Date().toISOString(),
+                    favorites: [],
+                    friends: [],
+                    customPrompts: [],
+                    sharedPrompts: [],
+                    settings: {
+                        theme: 'dark',
+                        language: 'vi'
+                    }
+                });
+            } else {
+                // Cập nhật thời gian đăng nhập cuối cùng
+                await window.firebaseUpdate(userRef, {
+                    lastLogin: new Date().toISOString()
+                });
+            }
+            
+            console.log('✅ Đăng nhập bằng email link thành công:', userId);
+            showToast('✓ Đăng nhập thành công!');
+            
+            return { success: true, userId };
+        } else {
+            return { success: false, error: 'Đây không phải là email verification link hợp lệ.' };
+        }
+    } catch (error) {
+        console.error('❌ Lỗi đăng nhập email link:', error.message);
+        showToast('❌ Lỗi đăng nhập. Vui lòng kiểm tra email của bạn.');
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Đăng nhập ẩn danh (Guest)
+ * @param {string} guestName - Tên khách (tùy chọn)
+ * @returns {Promise}
+ */
+async function firebaseGuestLogin(guestName = 'Guest') {
+    try {
+        const userCredential = await window.firebaseSignInAnonymously(window.firebaseAuth);
+        const user = userCredential.user;
+        const userId = user.uid;
+        
+        // Lưu thông tin guest vào Realtime Database
+        const userRef = window.firebaseRef(window.firebaseDB, `users/${userId}`);
+        
+        await window.firebaseSet(userRef, {
+            id: userId,
+            email: null,
+            name: guestName,
+            userType: 'guest',
+            isAnonymous: true,
+            createdAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString(),
+            favorites: [],
+            friends: [],
+            customPrompts: [],
+            sharedPrompts: [],
+            settings: {
+                theme: 'dark',
+                language: 'vi'
+            }
+        });
+        
+        console.log('✅ Đăng nhập ẩn danh thành công:', userId);
+        showToast(`✓ Chào mừng ${guestName}!`);
+        
+        return { success: true, userId };
+    } catch (error) {
+        console.error('❌ Lỗi đăng nhập ẩn danh:', error.message);
+        showToast('❌ Không thể đăng nhập ẩn danh. Vui lòng thử lại.');
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Khởi tạo reCAPTCHA cho đăng nhập bằng SMS
+ * @param {string} containerId - ID của container chứa reCAPTCHA
+ * @returns {RecaptchaVerifier}
+ */
+function initializeRecaptcha(containerId = 'recaptcha-container') {
+    try {
+        const recaptchaVerifier = new window.firebaseRecaptchaVerifier(containerId, {
+            size: 'normal',
+            callback: (response) => {
+                console.log('✅ reCAPTCHA verified');
+            },
+            'expired-callback': () => {
+                console.log('⚠️ reCAPTCHA expired');
+            }
+        }, window.firebaseAuth);
+        
+        return recaptchaVerifier;
+    } catch (error) {
+        console.error('❌ Lỗi khởi tạo reCAPTCHA:', error.message);
+        showToast('❌ Lỗi khởi tạo reCAPTCHA.');
+        return null;
+    }
+}
+
+/**
+ * Gửi mã OTP đến số điện thoại
+ * @param {string} phoneNumber - Số điện thoại (định dạng: +84xxxxxxxxx)
+ * @param {string} containerId - ID của container chứa reCAPTCHA
+ * @returns {Promise}
+ */
+async function sendPhoneOTP(phoneNumber, containerId = 'recaptcha-container') {
+    try {
+        const recaptchaVerifier = initializeRecaptcha(containerId);
+        
+        if (!recaptchaVerifier) {
+            return { success: false, error: 'Lỗi khởi tạo reCAPTCHA' };
+        }
+        
+        const appVerifier = recaptchaVerifier;
+        const confirmationResult = await window.firebaseSignInWithPhoneNumber(
+            window.firebaseAuth,
+            phoneNumber,
+            appVerifier
+        );
+        
+        // Lưu confirmationResult để xác minh OTP sau
+        window.phoneAuthConfirmationResult = confirmationResult;
+        
+        console.log('✅ OTP đã được gửi đến số điện thoại.');
+        showToast('✓ Mã OTP đã được gửi! Kiểm tra tin nhắn của bạn.');
+        
+        return { success: true, confirmationResult };
+    } catch (error) {
+        console.error('❌ Lỗi gửi OTP:', error.message);
+        
+        let errorMsg = 'Không thể gửi OTP.';
+        
+        if (error.code === 'auth/invalid-phone-number') {
+            errorMsg = 'Số điện thoại không hợp lệ. Sử dụng định dạng: +84xxxxxxxxx';
+        } else if (error.code === 'auth/too-many-requests') {
+            errorMsg = 'Quá nhiều yêu cầu. Vui lòng thử lại sau.';
+        } else if (error.code === 'auth/captcha-check-failed') {
+            errorMsg = 'reCAPTCHA verification thất bại.';
+        }
+        
+        showToast(`❌ ${errorMsg}`);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Xác minh mã OTP và đăng nhập
+ * @param {string} otp - Mã OTP từ tin nhắn
+ * @param {string} phoneNumber - Số điện thoại
+ * @param {string} name - Tên người dùng
+ * @param {string} userType - Loại người dùng (student/teacher)
+ * @returns {Promise}
+ */
+async function verifyPhoneOTP(otp, phoneNumber, name, userType = 'student') {
+    try {
+        if (!window.phoneAuthConfirmationResult) {
+            return { success: false, error: 'Vui lòng gửi OTP trước.' };
+        }
+        
+        const userCredential = await window.phoneAuthConfirmationResult.confirm(otp);
+        const user = userCredential.user;
+        const userId = user.uid;
+        
+        // Kiểm tra xem người dùng có tồn tại không
+        const userRef = window.firebaseRef(window.firebaseDB, `users/${userId}`);
+        const snapshot = await window.firebaseGet(userRef);
+        
+        // Nếu người dùng mới, tạo profile
+        if (!snapshot.exists()) {
+            await window.firebaseSet(userRef, {
+                id: userId,
+                email: null,
+                phone: phoneNumber,
+                name: name || phoneNumber,
+                userType: userType,
+                createdAt: new Date().toISOString(),
+                lastLogin: new Date().toISOString(),
+                favorites: [],
+                friends: [],
+                customPrompts: [],
+                sharedPrompts: [],
+                settings: {
+                    theme: 'dark',
+                    language: 'vi'
+                }
+            });
+        } else {
+            // Cập nhật thời gian đăng nhập cuối cùng
+            await window.firebaseUpdate(userRef, {
+                lastLogin: new Date().toISOString()
+            });
+        }
+        
+        console.log('✅ Xác minh OTP thành công:', userId);
+        showToast('✓ Đăng nhập thành công!');
+        
+        // Xóa confirmationResult
+        window.phoneAuthConfirmationResult = null;
+        
+        return { success: true, userId };
+    } catch (error) {
+        console.error('❌ Lỗi xác minh OTP:', error.message);
+        
+        let errorMsg = 'Mã OTP không chính xác.';
+        
+        if (error.code === 'auth/invalid-verification-code') {
+            errorMsg = 'Mã OTP không hợp lệ hoặc đã hết hạn.';
+        } else if (error.code === 'auth/code-expired') {
+            errorMsg = 'Mã OTP đã hết hạn. Vui lòng gửi lại.';
+        }
+        
+        showToast(`❌ ${errorMsg}`);
+        return { success: false, error: error.message };
+    }
+}
 console.log('✅ auth.js loaded successfully');
