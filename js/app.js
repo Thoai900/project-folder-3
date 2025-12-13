@@ -364,6 +364,39 @@ async function addFriendToFirebase(userId, friendData) {
     }
 }
 
+// Firestore chat helpers
+async function sendMessage(content, user) {
+    if (!window.db || !content || !user) return;
+
+    try {
+        await window.addDoc(window.collection(window.db, 'messages'), {
+            text: content,
+            userId: user.id,
+            userName: user.name,
+            createdAt: window.serverTimestamp()
+        });
+    } catch (error) {
+        console.error('❌ Lỗi gửi tin nhắn:', error);
+    }
+}
+
+function listenToMessages() {
+    if (!window.db) return () => {};
+
+    const messagesQuery = window.query(
+        window.collection(window.db, 'messages'),
+        window.orderBy('createdAt', 'asc')
+    );
+
+    return window.onSnapshot(messagesQuery, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === 'added' && typeof render === 'function') {
+                render(change.doc.data());
+            }
+        });
+    });
+}
+
 // ==========================================
 // 2. HELPER FUNCTIONS
 // ==========================================
