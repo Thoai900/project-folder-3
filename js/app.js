@@ -1895,9 +1895,9 @@ async function generateSmartPrompt() {
         });
 
         const smartData = await response.json();
-        if(data.error) throw new Error(data.error.message || data.error);
+        if(smartData.error) throw new Error(smartData.error.message || smartData.error);
 
-        let jsonText = data.candidates[0].content.parts[0].text;
+        let jsonText = smartData.candidates[0].content.parts[0].text;
         
         // Loại bỏ markdown code blocks (```json ... ```)
         jsonText = jsonText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
