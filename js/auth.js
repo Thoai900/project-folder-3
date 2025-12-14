@@ -258,6 +258,11 @@ function watchAuthState(callback) {
                 // Lưu vào localStorage để truy cập nhanh
                 localStorage.setItem('pm_currentUser', JSON.stringify(state.currentUser));
                 
+                // Tải danh sách phiên học đã lưu
+                if (typeof loadUserLearningSessions === 'function') {
+                    loadUserLearningSessions();
+                }
+
                 callback(state.currentUser);
             } else {
                 // User exists nhưng không có data - có thể permission denied
@@ -307,6 +312,8 @@ function watchAuthState(callback) {
             console.log('❌ Người dùng chưa đăng nhập.');
             state.currentUser = null;
             localStorage.removeItem('pm_currentUser');
+            state.learningSessions = [];
+            state.activeLearningSessionId = null;
             callback(null);
         }
     });

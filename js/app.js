@@ -253,7 +253,10 @@ let state = {
     learningFiles: [], // Danh sách files đã upload
     learningResults: [], // Kết quả từ các công cụ
     selectingForLearning: false, // Đang chọn prompt cho Learning Space
-    learningSelectedPrompt: null // Prompt đã chọn
+    learningSelectedPrompt: null, // Prompt đã chọn
+    // Learning session persistence
+    learningSessions: [], // Danh sách phiên đã lưu (metadata)
+    activeLearningSessionId: null
 };
 
 // ==========================================
@@ -750,6 +753,130 @@ function clearLearningContext() {
     
     renderApp();
     showToast('Đã xóa toàn bộ', 'info');
+}
+
+// ==========================================
+// LEARNING SESSION PERSISTENCE (Firebase)
+// ==========================================
+
+async function saveLearningSession() {
+    if (!state.currentUser) {
+        showToast('Vui lòng đăng nhập để lưu phiên học', 'warning');
+        openModal('login');
+        return;
+    }
+
+    if (!window.firebaseDB) {
+        showEmptyToast('Firebase chưa sẵn sàng', 'Hãy thử lại sau vài giây');
+        return;
+    }
+
+    const hasContent = (state.learningContext && state.learningContext.trim().length > 0) || state.learningResults.length > 0;
+    if (!hasContent) {
+        showToast('Chưa có nội dung để lưu', 'info');
+        return;
+    }
+
+    const titleInput = document.getElementById('learning-session-title');
+    const title = titleInput?.value?.trim() || `Phiên học ${new Date().toLocaleString('vi-VN')}`;
+
+    try {
+        const sessionRef = window.firebasePush(window.firebaseRef(window.firebaseDB, 'learningSessions'));
+        const sessionId = sessionRef.key;
+        const now = new Date().toISOString();
+
+        const payload = {
+            id: sessionId,
+            ownerId: state.currentUser.id,
+            ownerName: state.currentUser.name || state.currentUser.email,
+            title,
+            learningContext: state.learningContext || '',
+            learningResults: state.learningResults || [],
+            learningFiles: state.learningFiles || [],
+            learningTab: state.learningTab || 'prompts',
+            createdAt: now,
+            updatedAt: now,
+            isPublic: true
+        };
+
+        await window.firebaseSet(sessionRef, payload);
+
+        const userIndexRef = window.firebaseRef(window.firebaseDB, `users/${state.currentUser.id}/learningSessions/${sessionId}`);
+        await window.firebaseSet(userIndexRef, {
+            id: sessionId,
+            title,
+            updatedAt: now,
+            createdAt: now,
+            isPublic: true
+        });
+
+        state.learningSessions = [
+            { id: sessionId, title, updatedAt: now, createdAt: now, isPublic: true },
+            ...state.learningSessions
+        ];
+        state.activeLearningSessionId = sessionId;
+        renderApp();
+        showToast('Đã lưu phiên học', 'success');
+    } catch (error) {
+        console.error('Lỗi lưu phiên học:', error);
+        showEmptyToast('Lỗi lưu phiên học', error.message);
+    }
+}
+
+async function loadUserLearningSessions() {
+    if (!state.currentUser || !window.firebaseDB) return;
+
+    try {
+        const listRef = window.firebaseRef(window.firebaseDB, `users/${state.currentUser.id}/learningSessions`);
+        const snapshot = await window.firebaseGet(listRef);
+        if (snapshot.exists()) {
+            const val = snapshot.val();
+            const sessions = Object.values(val).sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
+            state.learningSessions = sessions;
+            renderApp();
+        }
+    } catch (error) {
+        console.error('Lỗi tải danh sách phiên học:', error);
+        showEmptyToast('Lỗi tải phiên học', error.message);
+    }
+}
+
+async function openLearningSession(sessionId) {
+    if (!sessionId || !window.firebaseDB) return;
+
+    try {
+        const sessionRef = window.firebaseRef(window.firebaseDB, `learningSessions/${sessionId}`);
+        const snapshot = await window.firebaseGet(sessionRef);
+
+        if (!snapshot.exists()) {
+            showEmptyToast('Không tìm thấy phiên học', 'Link có thể đã bị xóa hoặc không tồn tại');
+            return;
+        }
+
+        const data = snapshot.val();
+        state.learningContext = data.learningContext || '';
+        state.learningResults = data.learningResults || [];
+        state.learningFiles = data.learningFiles || [];
+        state.learningTab = data.learningTab || 'prompts';
+        state.activeLearningSessionId = sessionId;
+
+        const titleInput = document.getElementById('learning-session-title');
+        if (titleInput) titleInput.value = data.title || '';
+
+        renderApp();
+        showToast('Đã mở phiên học', 'info');
+    } catch (error) {
+        console.error('Lỗi mở phiên học:', error);
+        showEmptyToast('Lỗi mở phiên học', error.message);
+    }
+}
+
+function copyLearningSessionLink(sessionId) {
+    if (!sessionId) return;
+    const origin = window.location?.origin || '';
+    const url = `${origin}?session=${sessionId}`;
+    copyToClipboard(url);
+    showToast('Đã copy link chia sẻ', 'success');
 }
 
 function loadPromptTemplate() {
@@ -3110,6 +3237,51 @@ function renderLearningMainContent() {
             <div class="mb-6">
                 <h1 class="text-4xl font-black ${styles.textPrimary} mb-2">📚 Không gian học tập</h1>
                 <p class="${styles.textSecondary}">Sử dụng prompt hoặc tải tài liệu lên, sau đó áp dụng các công cụ bên phải</p>
+            </div>
+
+            <!-- Session Save/Load Bar -->
+            <div class="mb-4 flex flex-wrap items-center gap-3 ${styles.cardBg} border ${styles.border} rounded-xl p-4">
+                <input id="learning-session-title" type="text" placeholder="Đặt tên phiên học..." class="flex-1 min-w-[220px] ${styles.inputBg} border ${styles.border} rounded-lg px-3 py-2 ${styles.textPrimary} text-sm outline-none focus:border-indigo-500" />
+                <button onclick="saveLearningSession()" class="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold shadow-md hover:from-indigo-500 hover:to-purple-500 flex items-center gap-2">
+                    <i data-lucide="save" size="16"></i> Lưu phiên
+                </button>
+                <button onclick="loadUserLearningSessions()" class="px-3 py-2 rounded-lg ${styles.iconBg} border ${styles.border} ${styles.textPrimary} hover:border-indigo-500 flex items-center gap-2">
+                    <i data-lucide="refresh-ccw" size="16"></i> Tải phiên đã lưu
+                </button>
+                <button onclick="copyLearningSessionLink(state.activeLearningSessionId)" class="px-3 py-2 rounded-lg ${styles.iconBg} border ${styles.border} ${styles.textPrimary} hover:border-indigo-500 flex items-center gap-2 ${!state.activeLearningSessionId ? 'opacity-50 cursor-not-allowed' : ''}" ${!state.activeLearningSessionId ? 'disabled' : ''}>
+                    <i data-lucide="link" size="16"></i> Link chia sẻ
+                </button>
+            </div>
+
+            <!-- Saved Sessions List -->
+            <div class="mb-6 ${styles.cardBg} border ${styles.border} rounded-xl p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="bookmark" size="16" class="text-indigo-500"></i>
+                        <h3 class="font-bold ${styles.textPrimary}">Phiên đã lưu</h3>
+                    </div>
+                    ${state.activeLearningSessionId ? `<span class="text-xs ${styles.textSecondary}">Đang mở: ${state.activeLearningSessionId}</span>` : ''}
+                </div>
+                ${!state.currentUser ? `
+                    <p class="text-sm ${styles.textSecondary}">Đăng nhập để lưu và mở lại phiên học.</p>
+                ` : (state.learningSessions.length === 0 ? `
+                    <p class="text-sm ${styles.textSecondary}">Chưa có phiên nào. Lưu phiên đầu tiên để tiếp tục sau.</p>
+                ` : `
+                    <div class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                        ${state.learningSessions.map(sess => `
+                            <div class="flex items-center gap-3 ${styles.inputBg} border ${styles.border} rounded-lg px-3 py-2">
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm font-semibold ${styles.textPrimary} truncate">${sess.title || 'Phiên học'}</p>
+                                    <p class="text-[11px] ${styles.textSecondary}">Cập nhật: ${new Date(sess.updatedAt || sess.createdAt).toLocaleString('vi-VN')}</p>
+                                </div>
+                                <button onclick="openLearningSession('${sess.id}')" class="px-3 py-1 rounded-md bg-emerald-500/10 text-emerald-600 text-xs font-semibold hover:bg-emerald-500/20">Mở</button>
+                                <button onclick="copyLearningSessionLink('${sess.id}')" class="p-2 rounded-md ${styles.iconBg} border ${styles.border} ${styles.textSecondary} hover:${styles.textPrimary}" title="Copy link">
+                                    <i data-lucide="link" size="14"></i>
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                `)}
             </div>
             
             <!-- Prompt Input Area -->
