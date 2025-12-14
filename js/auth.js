@@ -1024,11 +1024,28 @@ async function sendEmailLinkSignIn(email) {
         console.log('🔍 Kiểm tra Firebase Auth:', window.firebaseAuth);
         console.log('🔍 Current URL:', window.location.href);
         console.log('🔍 Origin:', window.location.origin);
+        console.log('🔍 Protocol:', window.location.protocol);
 
-        // Cấu hình ActionCodeSettings - Sử dụng full URL thay vì origin
+        // Xác định URL base cho production (Vercel) hoặc local
+        let continueUrl = window.location.origin;
+        
+        // Nếu là production (HTTPS), sử dụng origin
+        if (window.location.protocol === 'https:') {
+            continueUrl = window.location.origin;
+        } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            // Local development
+            continueUrl = window.location.origin;
+        } else {
+            // Fallback
+            continueUrl = `${window.location.protocol}//${window.location.host}`;
+        }
+
+        console.log('📋 Continue URL sẽ dùng:', continueUrl);
+
+        // Cấu hình ActionCodeSettings
         const actionCodeSettings = {
-            // URL để redirect sau khi click link (phải là HTTPS trong production)
-            url: window.location.href.split('?')[0], // Loại bỏ query params
+            // URL để redirect sau khi click link
+            url: continueUrl,
             // Phải set là true để hoàn thành sign-in trong app
             handleCodeInApp: true
         };
