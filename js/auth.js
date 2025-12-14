@@ -48,8 +48,14 @@ async function firebaseSignUp(email, password, name, userType = 'student') {
         console.log('✅ Đăng ký thành công:', userId);
         // Gửi email xác minh
         if (window.firebaseSendEmailVerification) {
-            await window.firebaseSendEmailVerification(user);
-            showToast(`✓ Đăng ký thành công! Kiểm tra email ${email} để xác minh.`, 'info');
+            try {
+                await window.firebaseSendEmailVerification(user);
+                console.log('📧 Email xác minh đã gửi tới:', email);
+                showToast(`✓ Đăng ký thành công! Kiểm tra email ${email} để xác minh (kể cả spam).`, 'info');
+            } catch (emailError) {
+                console.error('❌ Lỗi gửi email xác minh:', emailError);
+                showToast(`✓ Đăng ký thành công nhưng không gửi được email xác minh. Vui lòng yêu cầu gửi lại.`, 'warning');
+            }
         } else {
             showToast(`✓ Chào mừng ${name}! Đăng ký thành công.`, 'success');
         }
@@ -1008,15 +1014,27 @@ async function sendEmailLinkSignIn(email) {
             return { success: false, error: 'Email required' };
         }
 
-        // Cấu hình ActionCodeSettings
+        // Kiểm tra Firebase Auth đã sẵn sàng chưa
+        if (!window.firebaseAuth || !window.firebaseSendSignInLinkToEmail) {
+            console.error('❌ Firebase Auth chưa được khởi tạo');
+            showToast('Lỗi hệ thống. Vui lòng tải lại trang.', 'error');
+            return { success: false, error: 'Firebase not initialized' };
+        }
+
+        console.log('🔍 Kiểm tra Firebase Auth:', window.firebaseAuth);
+        console.log('🔍 Current URL:', window.location.href);
+        console.log('🔍 Origin:', window.location.origin);
+
+        // Cấu hình ActionCodeSettings - Sử dụng full URL thay vì origin
         const actionCodeSettings = {
-            // URL để redirect sau khi click link
-            url: window.location.origin,
+            // URL để redirect sau khi click link (phải là HTTPS trong production)
+            url: window.location.href.split('?')[0], // Loại bỏ query params
             // Phải set là true để hoàn thành sign-in trong app
             handleCodeInApp: true
         };
 
         console.log('📧 Đang gửi email link đăng nhập cho:', email);
+        console.log('📋 ActionCodeSettings:', actionCodeSettings);
         
         // Gửi email link
         await window.firebaseSendSignInLinkToEmail(window.firebaseAuth, email, actionCodeSettings);
@@ -1024,22 +1042,30 @@ async function sendEmailLinkSignIn(email) {
         // Lưu email vào localStorage để xác minh sau
         localStorage.setItem('emailForSignIn', email);
         
-        console.log('✅ Email link đã gửi thành công');
-        showToast(`✅ Email đăng nhập đã gửi tới ${email}. Vui lòng kiểm tra email của bạn!`, 'success');
+        console.log('✅ Email link đã gửi thành công tới:', email);
+        console.log('📝 Email đã lưu vào localStorage');
+        showToast(`✅ Link đăng nhập đã gửi tới ${email}. Kiểm tra hộp thư (kể cả spam)!`, 'success');
         
         return { success: true, email };
     } catch (error) {
-        console.error('❌ Lỗi gửi email link:', error.message);
+        console.error('❌ Lỗi gửi email link:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        console.error('Full error object:', error);
         
         let errorMsg = 'Không thể gửi email đăng nhập.';
         if (error.code === 'auth/invalid-email') {
-            errorMsg = 'Email không hợp lệ.';
+            errorMsg = 'Email không hợp lệ. Vui lòng kiểm tra lại.';
         } else if (error.code === 'auth/too-many-requests') {
-            errorMsg = 'Quá nhiều yêu cầu. Vui lòng thử lại sau.';
+            errorMsg = 'Quá nhiều yêu cầu. Vui lòng thử lại sau 5 phút.';
+        } else if (error.code === 'auth/unauthorized-domain' || error.code === 'auth/invalid-continue-uri') {
+            errorMsg = `Domain chưa được authorize trên Firebase. Vui lòng thêm "${window.location.origin}" vào Authorized domains trong Firebase Console.`;
+        } else if (error.code === 'auth/operation-not-allowed') {
+            errorMsg = 'Email link sign-in chưa được bật trong Firebase Console. Vào Authentication → Sign-in method → Email/Password → Bật "Email link (passwordless sign-in)".';
         }
         
-        showToast(`❌ ${errorMsg}`);
-        return { success: false, error: error.message };
+        showToast(`❌ ${errorMsg}`, 'error');
+        return { success: false, error: error.message, code: error.code };
     }
 }
 
