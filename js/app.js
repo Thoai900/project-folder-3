@@ -549,27 +549,29 @@ async function handleLearningFileUpload(event) {
             
             // Process based on file type
             if (fileType.startsWith('image/')) {
-                // For images, use image-scan API
-                const base64 = await fileToBase64(file);
+                // For images, use image-scan API (expects imageBase64, mimeType, action)
+                const base64 = await fileToBase64(file); // only the data part
                 const idToken = await getFirebaseIdToken();
                 const headers = { 'Content-Type': 'application/json' };
                 if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
-                
+
                 const result = await fetch('/api/image-scan', {
                     method: 'POST',
                     headers,
                     body: JSON.stringify({ 
-                        image: base64,
-                        prompt: 'Phân tích hình ảnh này và trích xuất toàn bộ văn bản, nội dung học thuật. Nếu là sơ đồ, công thức, hãy mô tả chi tiết.'
+                        imageBase64: base64,
+                        mimeType: fileType,
+                        action: 'scan'
                     })
                 });
-                
+
                 if (!result.ok) {
-                    throw new Error('Lỗi xử lý ảnh');
+                    const errText = await result.text();
+                    throw new Error('Lỗi xử lý ảnh: ' + errText);
                 }
-                
+
                 const data = await result.json();
-                extractedContent = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Không thể trích xuất nội dung từ ảnh';
+                extractedContent = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Không thể trích xuất nội dung từ ảnh';
                 
             } else if (fileType === 'application/pdf' || fileExt === 'pdf') {
                 // For PDF, read as text (basic extraction - limited)
