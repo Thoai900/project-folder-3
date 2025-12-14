@@ -97,9 +97,33 @@ Quy tắc:
 
             if (data.error) {
                 console.error('Gemini API Error:', data.error);
-                return res.status(response.status).json({ 
-                    error: data.error.message || 'Error from Gemini API'
-                });
+                // Fallback to OpenAI
+                if (openaiKey) {
+                    const openaiModel = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+                    const oaResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${openaiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: openaiModel,
+                            messages: [
+                                { role: 'system', content: systemInstruction },
+                                { role: 'user', content: `Prompt gốc: ${prompt}` }
+                            ],
+                            temperature: 0.3,
+                            max_tokens: 1000
+                        })
+                    });
+                    const oaData = await oaResponse.json();
+                    if (oaData.error) {
+                        return res.status(oaResponse.status).json({ error: oaData.error.message || 'Error from OpenAI API' });
+                    }
+                    const refinedText = sanitizeText(oaData.choices?.[0]?.message?.content || prompt);
+                    return res.status(200).json({ original: prompt, refined: refinedText.trim(), provider: 'openai', model: oaData.model || openaiModel });
+                }
+                return res.status(response.status).json({ error: data.error.message || 'Error from Gemini API' });
             }
 
             const refinedPrompt = sanitizeText(data.candidates?.[0]?.content?.parts?.[0]?.text || prompt);

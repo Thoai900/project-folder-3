@@ -79,11 +79,39 @@ module.exports = async function handler(req, res) {
 
             const data = await response.json();
 
-            if (data.error) {
-                console.error('Gemini API Error:', data.error);
-                return res.status(response.status).json({ 
-                    error: data.error.message || 'Error from Gemini API'
-                });
+            if (!response.ok || data.error) {
+                console.error('Gemini API Error:', data.error || response.statusText);
+                // Fallback to OpenAI if available
+                if (openaiKey) {
+                    try {
+                        const openaiModel = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+                        const oaResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${openaiKey}`
+                            },
+                            body: JSON.stringify({
+                                model: openaiModel,
+                                messages: [ { role: 'user', content: prompt } ],
+                                temperature
+                            })
+                        });
+                        const oaData = await oaResponse.json();
+                        if (oaData.error) {
+                            return res.status(oaResponse.status).json({ error: oaData.error.message || 'Error from OpenAI API' });
+                        }
+                        const text = oaData.choices?.[0]?.message?.content || '';
+                        return res.status(200).json({
+                            provider: 'openai',
+                            model: oaData.model || openaiModel,
+                            candidates: [ { content: { parts: [ { text } ] } } ]
+                        });
+                    } catch (e) {
+                        return res.status(502).json({ error: 'Gemini failed and OpenAI fallback also failed.' });
+                    }
+                }
+                return res.status(response.status).json({ error: data.error?.message || 'Error from Gemini API' });
             }
 
             return res.status(200).json({ ...data, provider: 'gemini' });

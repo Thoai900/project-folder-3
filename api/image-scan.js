@@ -95,6 +95,40 @@ Chỉ trả về JSON thuần (không markdown, không mô tả). Văn bản: ${
 
             if (data.error) {
                 console.error('Gemini API Error:', data.error);
+                // Fallback to OpenAI if available
+                if (openaiKey) {
+                    const openaiModel = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+                    const oaResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${openaiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: openaiModel,
+                            messages: [
+                                { role: 'user', content: promptText }
+                            ]
+                        })
+                    });
+                    const oaData = await oaResponse.json();
+                    if (oaData.error) {
+                        return res.status(oaResponse.status).json({ error: oaData.error.message || 'Error from OpenAI API' });
+                    }
+                    if (action === 'analyze') {
+                        const text = oaData.choices?.[0]?.message?.content || '';
+                        let parsed = {};
+                        try { parsed = JSON.parse(text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()); } catch {}
+                        return res.status(200).json({ provider: 'openai', model: oaData.model || openaiModel, analysis: parsed });
+                    }
+                    // Wrap to Gemini-like
+                    const text = oaData.choices?.[0]?.message?.content || '';
+                    return res.status(200).json({
+                        provider: 'openai',
+                        model: oaData.model || openaiModel,
+                        candidates: [ { content: { parts: [ { text } ] } } ]
+                    });
+                }
                 return res.status(response.status).json({ 
                     error: data.error.message || 'Error from Gemini API'
                 });
