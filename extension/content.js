@@ -6,7 +6,7 @@
 
     // Cấu hình API endpoint
     // TODO: Thay 'project-folder-1' bằng domain Vercel thực tế của bạn
-    const API_ENDPOINT = 'https://project-folder-1.vercel.app/api/refine-prompt';
+    const API_ENDPOINT = 'https://project-folder-3.vercel.app/api/refine-prompt';
 
     // Selectors cho các trang AI khác nhau
     const TEXTAREA_SELECTORS = [

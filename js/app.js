@@ -2629,45 +2629,83 @@ function renderLearningSpace() {
     
     return `
         <div class="flex h-screen pt-16 pb-20 md:pb-0">
-            <!-- Sidebar -->
-            <div class="hidden md:block w-64 ${styles.cardBg} border-r ${styles.border} overflow-y-auto">
-                <div class="p-6 space-y-6">
-                    <div>
-                        <h3 class="text-sm font-bold ${styles.textSecondary} uppercase tracking-wider mb-3">Nội dung</h3>
-                        <nav class="space-y-1">
-                            <button onclick="setLearningTab('prompts')" class="w-full text-left px-4 py-2.5 rounded-lg ${state.learningTab === 'prompts' ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/30' : styles.textSecondary + ' hover:bg-white/5'} font-medium transition-all flex items-center gap-3">
-                                <i data-lucide="book-open" size="18"></i> Prompt mẫu
-                            </button>
-                            <button onclick="setLearningTab('scan')" class="w-full text-left px-4 py-2.5 rounded-lg ${state.learningTab === 'scan' ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/30' : styles.textSecondary + ' hover:bg-white/5'} font-medium transition-all flex items-center gap-3">
-                                <i data-lucide="scan" size="18"></i> Quét ảnh
-                            </button>
-                            <button onclick="setLearningTab('notes')" class="w-full text-left px-4 py-2.5 rounded-lg ${state.learningTab === 'notes' ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/30' : styles.textSecondary + ' hover:bg-white/5'} font-medium transition-all flex items-center gap-3">
-                                <i data-lucide="file-text" size="18"></i> Ghi chú
-                            </button>
-                        </nav>
-                    </div>
-                    
-                    <div>
-                        <h3 class="text-sm font-bold ${styles.textSecondary} uppercase tracking-wider mb-3">Công cụ</h3>
-                        <nav class="space-y-1">
-                            <button onclick="setLearningTab('summary')" class="w-full text-left px-4 py-2.5 rounded-lg ${state.learningTab === 'summary' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/30' : styles.textSecondary + ' hover:bg-white/5'} font-medium transition-all flex items-center gap-3">
-                                <i data-lucide="file-text" size="18"></i> Tóm tắt
-                            </button>
-                            <button onclick="setLearningTab('flashcards')" class="w-full text-left px-4 py-2.5 rounded-lg ${state.learningTab === 'flashcards' ? 'bg-purple-500/10 text-purple-500 border border-purple-500/30' : styles.textSecondary + ' hover:bg-white/5'} font-medium transition-all flex items-center gap-3">
-                                <i data-lucide="credit-card" size="18"></i> Flashcards
-                            </button>
-                            <button onclick="setLearningTab('quiz')" class="w-full text-left px-4 py-2.5 rounded-lg ${state.learningTab === 'quiz' ? 'bg-green-500/10 text-green-500 border border-green-500/30' : styles.textSecondary + ' hover:bg-white/5'} font-medium transition-all flex items-center gap-3">
-                                <i data-lucide="help-circle" size="18"></i> Câu hỏi
-                            </button>
-                        </nav>
-                    </div>
+            <!-- Main Content Area -->
+            <div class="flex-1 overflow-y-auto ${styles.bg}">
+                <div class="max-w-4xl mx-auto px-6 py-8">
+                    ${renderLearningContent()}
                 </div>
             </div>
             
-            <!-- Main Content -->
-            <div class="flex-1 overflow-y-auto">
-                <div class="max-w-5xl mx-auto px-4 py-8">
-                    ${renderLearningContent()}
+            <!-- Right Sidebar - Tools -->
+            <div class="hidden md:flex w-20 ${styles.cardBg} border-l ${styles.border} flex-col items-center py-6 gap-6">
+                <div class="flex flex-col gap-4">
+                    <button 
+                        onclick="setLearningTab('prompts')" 
+                        class="relative group"
+                        title="Prompt mẫu"
+                    >
+                        <div class="w-12 h-12 rounded-xl ${state.learningTab === 'prompts' ? 'bg-indigo-500 text-white' : styles.iconBg + ' ' + styles.textSecondary} flex items-center justify-center hover:scale-110 transition-all cursor-pointer">
+                            <i data-lucide="book-open" size="20"></i>
+                        </div>
+                        ${state.learningTab === 'prompts' ? '<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-indigo-500 rounded-r"></div>' : ''}
+                    </button>
+                    
+                    <button 
+                        onclick="setLearningTab('scan')" 
+                        class="relative group"
+                        title="Quét ảnh"
+                    >
+                        <div class="w-12 h-12 rounded-xl ${state.learningTab === 'scan' ? 'bg-orange-500 text-white' : styles.iconBg + ' ' + styles.textSecondary} flex items-center justify-center hover:scale-110 transition-all cursor-pointer">
+                            <i data-lucide="scan" size="20"></i>
+                        </div>
+                        ${state.learningTab === 'scan' ? '<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-orange-500 rounded-r"></div>' : ''}
+                    </button>
+                    
+                    <button 
+                        onclick="setLearningTab('summary')" 
+                        class="relative group"
+                        title="Tóm tắt"
+                    >
+                        <div class="w-12 h-12 rounded-xl ${state.learningTab === 'summary' ? 'bg-blue-500 text-white' : styles.iconBg + ' ' + styles.textSecondary} flex items-center justify-center hover:scale-110 transition-all cursor-pointer">
+                            <i data-lucide="file-text" size="20"></i>
+                        </div>
+                        ${state.learningTab === 'summary' ? '<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-500 rounded-r"></div>' : ''}
+                    </button>
+                    
+                    <button 
+                        onclick="setLearningTab('flashcards')" 
+                        class="relative group"
+                        title="Flashcards"
+                    >
+                        <div class="w-12 h-12 rounded-xl ${state.learningTab === 'flashcards' ? 'bg-purple-500 text-white' : styles.iconBg + ' ' + styles.textSecondary} flex items-center justify-center hover:scale-110 transition-all cursor-pointer">
+                            <i data-lucide="credit-card" size="20"></i>
+                        </div>
+                        ${state.learningTab === 'flashcards' ? '<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-purple-500 rounded-r"></div>' : ''}
+                    </button>
+                    
+                    <button 
+                        onclick="setLearningTab('quiz')" 
+                        class="relative group"
+                        title="Câu hỏi"
+                    >
+                        <div class="w-12 h-12 rounded-xl ${state.learningTab === 'quiz' ? 'bg-green-500 text-white' : styles.iconBg + ' ' + styles.textSecondary} flex items-center justify-center hover:scale-110 transition-all cursor-pointer">
+                            <i data-lucide="help-circle" size="20"></i>
+                        </div>
+                        ${state.learningTab === 'quiz' ? '<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-green-500 rounded-r"></div>' : ''}
+                    </button>
+                    
+                    <div class="w-12 h-px ${styles.border} my-2"></div>
+                    
+                    <button 
+                        onclick="setLearningTab('chat')" 
+                        class="relative group"
+                        title="Trò chuyện"
+                    >
+                        <div class="w-12 h-12 rounded-xl ${state.learningTab === 'chat' ? 'bg-teal-500 text-white' : styles.iconBg + ' ' + styles.textSecondary} flex items-center justify-center hover:scale-110 transition-all cursor-pointer">
+                            <i data-lucide="message-circle" size="20"></i>
+                        </div>
+                        ${state.learningTab === 'chat' ? '<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-teal-500 rounded-r"></div>' : ''}
+                    </button>
                 </div>
             </div>
         </div>
@@ -2690,51 +2728,88 @@ function renderLearningContent() {
         });
         
         return `
+            <!-- Header with search -->
             <div class="mb-8">
-                <h2 class="text-3xl font-bold ${styles.textPrimary} mb-2">📚 Prompt mẫu học tập</h2>
-                <p class="${styles.textSecondary} mb-4">Các prompt được thiết kế sẵn từ thư viện để hỗ trợ học tập hiệu quả</p>
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 class="text-4xl font-black ${styles.textPrimary} mb-2">Không gian học tập</h1>
+                        <p class="${styles.textSecondary}">Khám phá các prompt mẫu và công cụ hỗ trợ học tập</p>
+                    </div>
+                </div>
                 
                 <!-- Search bar -->
-                <div class="relative mb-6">
-                    <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 ${styles.textSecondary}" size="18"></i>
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-5 top-1/2 -translate-y-1/2 ${styles.textSecondary}" size="20"></i>
                     <input 
                         type="text" 
                         id="learning-search-input"
                         value="${searchTerm}"
-                        placeholder="Tìm kiếm prompt (Toán, Lý, Hóa, Văn...)" 
-                        class="w-full ${styles.inputBg} border ${styles.border} rounded-xl pl-12 pr-4 py-3 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all"
+                        placeholder="Tìm kiếm theo môn học: Toán, Lý, Hóa, Sinh, Văn, Anh, Sử, Địa..." 
+                        class="w-full ${styles.cardBg} border ${styles.border} rounded-2xl pl-14 pr-6 py-4 ${styles.textPrimary} text-lg outline-none focus:border-indigo-500 focus:shadow-lg transition-all"
                     />
                 </div>
             </div>
             
-            <div class="grid md:grid-cols-2 gap-4 mb-6">
+            <!-- Subject filters -->
+            <div class="flex gap-3 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+                ${SUBJECT_LIST.map(subject => {
+                    const isActive = searchTerm === subject;
+                    return `
+                        <button 
+                            onclick="setLearningSearch('${subject}')" 
+                            class="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium whitespace-nowrap transition-all ${isActive ? 'bg-indigo-500 text-white shadow-lg' : styles.iconBg + ' ' + styles.textSecondary + ' hover:bg-indigo-500/10'}"
+                        >
+                            ${SUBJECT_ICONS[subject] ? `<img src="${SUBJECT_ICONS[subject]}" class="w-5 h-5 rounded object-cover" />` : ''}
+                            ${subject}
+                        </button>
+                    `;
+                }).join('')}
+                ${searchTerm ? `
+                    <button 
+                        onclick="setLearningSearch('')" 
+                        class="px-4 py-2.5 rounded-xl font-medium whitespace-nowrap ${styles.iconBg} ${styles.textSecondary} hover:bg-red-500/10 hover:text-red-500 transition-all"
+                    >
+                        <i data-lucide="x" size="16" class="inline"></i> Xóa bộ lọc
+                    </button>
+                ` : ''}
+            </div>
+            
+            <!-- Prompts grid -->
+            <div class="space-y-4">
                 ${learningPrompts.length === 0 ? `
-                    <div class="col-span-2 text-center py-12 ${styles.cardBg} border ${styles.border} rounded-2xl">
-                        <i data-lucide="search-x" size="48" class="${styles.textSecondary} mx-auto mb-3"></i>
-                        <p class="${styles.textSecondary}">Không tìm thấy prompt nào phù hợp</p>
+                    <div class="text-center py-20 ${styles.cardBg} border ${styles.border} rounded-3xl">
+                        <i data-lucide="search-x" size="64" class="${styles.textSecondary} mx-auto mb-4 opacity-30"></i>
+                        <h3 class="text-xl font-bold ${styles.textPrimary} mb-2">Không tìm thấy prompt</h3>
+                        <p class="${styles.textSecondary}">Thử tìm kiếm với từ khóa khác</p>
                     </div>
                 ` : learningPrompts.map(prompt => {
-                    // Tìm icon cho subject
                     const subjectIcon = SUBJECT_ICONS[prompt.tags[0]] || '';
                     
                     return `
-                        <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6 hover:border-indigo-500/50 transition-all cursor-pointer" onclick="useLearningPrompt(${prompt.id})">
-                            <div class="flex items-start gap-4">
+                        <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6 hover:border-indigo-500/50 hover:shadow-lg transition-all cursor-pointer group" onclick="useLearningPrompt(${prompt.id})">
+                            <div class="flex items-start gap-5">
                                 ${subjectIcon ? `
-                                    <div class="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 ring-2 ring-white/10">
+                                    <div class="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 ring-2 ${styles.border} group-hover:ring-indigo-500/50 transition-all">
                                         <img src="${subjectIcon}" alt="${prompt.tags[0]}" class="w-full h-full object-cover">
                                     </div>
                                 ` : `
-                                    <div class="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-2xl flex-shrink-0">
+                                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-3xl flex-shrink-0 group-hover:scale-110 transition-transform">
                                         📚
                                     </div>
                                 `}
-                                <div class="flex-1">
-                                    <h3 class="font-bold ${styles.textPrimary} mb-1">${prompt.title}</h3>
-                                    <p class="text-sm ${styles.textSecondary} mb-3">${prompt.description}</p>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="text-xl font-bold ${styles.textPrimary} mb-2 group-hover:text-indigo-500 transition-colors">${prompt.title}</h3>
+                                    <p class="text-sm ${styles.textSecondary} mb-4 line-clamp-2">${prompt.description}</p>
                                     <div class="flex gap-2 flex-wrap">
-                                        ${prompt.tags.map(tag => `<span class="px-2 py-1 rounded-full text-xs ${styles.iconBg} ${styles.textSecondary}">${tag}</span>`).join('')}
+                                        ${prompt.tags.map(tag => `
+                                            <span class="px-3 py-1.5 rounded-lg text-xs font-medium ${styles.iconBg} ${styles.textPrimary} border ${styles.border}">
+                                                ${tag}
+                                            </span>
+                                        `).join('')}
                                     </div>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i data-lucide="arrow-right" size="24" class="${styles.textSecondary} group-hover:text-indigo-500 group-hover:translate-x-1 transition-all"></i>
                                 </div>
                             </div>
                         </div>
@@ -2745,77 +2820,118 @@ function renderLearningContent() {
     } else if (tab === 'scan') {
         return `
             <div class="mb-8">
-                <h2 class="text-3xl font-bold ${styles.textPrimary} mb-2">📸 Quét và phân tích ảnh</h2>
-                <p class="${styles.textSecondary}">Upload ảnh bài tập, tài liệu để AI phân tích và giải thích</p>
+                <h1 class="text-4xl font-black ${styles.textPrimary} mb-2">📸 Quét và phân tích ảnh</h1>
+                <p class="${styles.textSecondary}">Upload ảnh bài tập, tài liệu để AI phân tích và giải thích chi tiết</p>
             </div>
             
-            <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-8">
-                <div class="text-center mb-6">
-                    <div class="w-24 h-24 mx-auto rounded-full ${styles.iconBg} flex items-center justify-center mb-4">
-                        <i data-lucide="upload" size="40" class="${styles.textSecondary}"></i>
+            <div class="${styles.cardBg} border-2 border-dashed ${styles.border} rounded-3xl p-12 hover:border-indigo-500/50 transition-all">
+                <div class="text-center mb-8">
+                    <div class="w-32 h-32 mx-auto rounded-3xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center mb-6 animate-pulse">
+                        <i data-lucide="image-plus" size="56" class="text-indigo-500"></i>
                     </div>
-                    <h3 class="text-xl font-bold ${styles.textPrimary} mb-2">Tải ảnh lên</h3>
-                    <p class="${styles.textSecondary} text-sm">Hỗ trợ JPG, PNG, PDF</p>
+                    <h3 class="text-2xl font-bold ${styles.textPrimary} mb-3">Kéo thả hoặc chọn ảnh</h3>
+                    <p class="${styles.textSecondary} mb-6">Hỗ trợ: JPG, PNG, JPEG • Tối đa 10MB</p>
                 </div>
                 
                 <input type="file" id="learning-image-input" accept="image/*" class="hidden" onchange="handleLearningImageUpload(event)">
-                <button onclick="document.getElementById('learning-image-input').click()" class="w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all flex items-center justify-center gap-2">
-                    <i data-lucide="upload" size="20"></i> Chọn ảnh
+                <button onclick="document.getElementById('learning-image-input').click()" class="w-full py-5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-lg font-bold transition-all flex items-center justify-center gap-3 shadow-xl">
+                    <i data-lucide="upload" size="24"></i> Chọn ảnh từ thiết bị
                 </button>
                 
-                <div id="learning-scan-result" class="mt-6"></div>
+                <div id="learning-scan-result" class="mt-8"></div>
             </div>
         `;
     } else if (tab === 'summary') {
         return `
             <div class="mb-8">
-                <h2 class="text-3xl font-bold ${styles.textPrimary} mb-2">📝 Tóm tắt nội dung</h2>
-                <p class="${styles.textSecondary}">Nhập văn bản dài để AI tóm tắt các ý chính</p>
+                <h1 class="text-4xl font-black ${styles.textPrimary} mb-2">📝 Tóm tắt nội dung</h1>
+                <p class="${styles.textSecondary}">AI sẽ trích xuất và tóm tắt các ý chính từ văn bản của bạn</p>
             </div>
             
-            <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6">
-                <textarea id="summary-input" class="w-full h-48 ${styles.inputBg} border ${styles.border} rounded-xl p-4 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all resize-none" placeholder="Dán nội dung cần tóm tắt vào đây..."></textarea>
-                <button onclick="generateSummary()" class="mt-4 w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all flex items-center justify-center gap-2">
-                    <i data-lucide="file-text" size="20"></i> Tạo tóm tắt
+            <div class="${styles.cardBg} border ${styles.border} rounded-3xl p-8">
+                <div class="mb-4">
+                    <label class="block text-sm font-bold ${styles.textPrimary} mb-3">Nội dung cần tóm tắt</label>
+                    <textarea 
+                        id="summary-input" 
+                        class="w-full h-64 ${styles.inputBg} border ${styles.border} rounded-2xl p-5 ${styles.textPrimary} text-base outline-none focus:border-blue-500 focus:shadow-lg transition-all resize-none" 
+                        placeholder="Dán nội dung văn bản dài vào đây... (bài giảng, tài liệu, bài báo...)"
+                    ></textarea>
+                </div>
+                <button onclick="generateSummary()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-lg font-bold transition-all flex items-center justify-center gap-3 shadow-xl">
+                    <i data-lucide="sparkles" size="24"></i> Tạo tóm tắt thông minh
                 </button>
-                <div id="summary-result" class="mt-6"></div>
+                <div id="summary-result" class="mt-8"></div>
             </div>
         `;
     } else if (tab === 'flashcards') {
         return `
             <div class="mb-8">
-                <h2 class="text-3xl font-bold ${styles.textPrimary} mb-2">🎴 Tạo Flashcards</h2>
-                <p class="${styles.textSecondary}">Nhập nội dung học để AI tạo flashcards ôn tập</p>
+                <h1 class="text-4xl font-black ${styles.textPrimary} mb-2">🎴 Tạo Flashcards</h1>
+                <p class="${styles.textSecondary}">Tạo thẻ ghi nhớ hai mặt để ôn tập hiệu quả hơn</p>
             </div>
             
-            <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6">
-                <textarea id="flashcard-input" class="w-full h-48 ${styles.inputBg} border ${styles.border} rounded-xl p-4 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all resize-none" placeholder="Nhập nội dung cần tạo flashcard..."></textarea>
-                <button onclick="generateFlashcards()" class="mt-4 w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all flex items-center justify-center gap-2">
-                    <i data-lucide="credit-card" size="20"></i> Tạo Flashcards
+            <div class="${styles.cardBg} border ${styles.border} rounded-3xl p-8">
+                <div class="mb-4">
+                    <label class="block text-sm font-bold ${styles.textPrimary} mb-3">Nội dung học tập</label>
+                    <textarea 
+                        id="flashcard-input" 
+                        class="w-full h-64 ${styles.inputBg} border ${styles.border} rounded-2xl p-5 ${styles.textPrimary} text-base outline-none focus:border-purple-500 focus:shadow-lg transition-all resize-none" 
+                        placeholder="Nhập kiến thức cần ghi nhớ... AI sẽ tạo flashcards với mặt trước (câu hỏi) và mặt sau (đáp án)"
+                    ></textarea>
+                </div>
+                <button onclick="generateFlashcards()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-lg font-bold transition-all flex items-center justify-center gap-3 shadow-xl">
+                    <i data-lucide="layers" size="24"></i> Tạo Flashcards
                 </button>
-                <div id="flashcard-result" class="mt-6"></div>
+                <div id="flashcard-result" class="mt-8"></div>
             </div>
         `;
     } else if (tab === 'quiz') {
         return `
             <div class="mb-8">
-                <h2 class="text-3xl font-bold ${styles.textPrimary} mb-2">❓ Tạo câu hỏi kiểm tra</h2>
-                <p class="${styles.textSecondary}">Nhập nội dung để AI tạo câu hỏi trắc nghiệm và tự luận</p>
+                <h1 class="text-4xl font-black ${styles.textPrimary} mb-2">❓ Tạo câu hỏi kiểm tra</h1>
+                <p class="${styles.textSecondary}">Sinh câu hỏi trắc nghiệm và tự luận để kiểm tra kiến thức</p>
             </div>
             
-            <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6">
-                <textarea id="quiz-input" class="w-full h-48 ${styles.inputBg} border ${styles.border} rounded-xl p-4 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all resize-none" placeholder="Nhập nội dung để tạo câu hỏi kiểm tra..."></textarea>
-                <button onclick="generateQuiz()" class="mt-4 w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold transition-all flex items-center justify-center gap-2">
-                    <i data-lucide="help-circle" size="20"></i> Tạo câu hỏi
+            <div class="${styles.cardBg} border ${styles.border} rounded-3xl p-8">
+                <div class="mb-4">
+                    <label class="block text-sm font-bold ${styles.textPrimary} mb-3">Nội dung kiến thức</label>
+                    <textarea 
+                        id="quiz-input" 
+                        class="w-full h-64 ${styles.inputBg} border ${styles.border} rounded-2xl p-5 ${styles.textPrimary} text-base outline-none focus:border-green-500 focus:shadow-lg transition-all resize-none" 
+                        placeholder="Nhập nội dung bài học... AI sẽ tạo câu hỏi trắc nghiệm 4 đáp án và câu hỏi tự luận kèm đáp án"
+                    ></textarea>
+                </div>
+                <button onclick="generateQuiz()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white text-lg font-bold transition-all flex items-center justify-center gap-3 shadow-xl">
+                    <i data-lucide="clipboard-check" size="24"></i> Tạo câu hỏi kiểm tra
                 </button>
-                <div id="quiz-result" class="mt-6"></div>
+                <div id="quiz-result" class="mt-8"></div>
+            </div>
+        `;
+    } else if (tab === 'chat') {
+        return `
+            <div class="mb-8">
+                <h1 class="text-4xl font-black ${styles.textPrimary} mb-2">💬 Trò chuyện với AI</h1>
+                <p class="${styles.textSecondary}">Đặt câu hỏi và nhận câu trả lời chi tiết từ AI</p>
+            </div>
+            
+            <div class="${styles.cardBg} border ${styles.border} rounded-3xl p-8">
+                <div class="text-center py-12">
+                    <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-teal-500/20 to-blue-500/20 flex items-center justify-center mb-6">
+                        <i data-lucide="message-circle" size="40" class="text-teal-500"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold ${styles.textPrimary} mb-3">Bắt đầu cuộc trò chuyện</h3>
+                    <p class="${styles.textSecondary} mb-8 max-w-md mx-auto">Sử dụng prompt từ thư viện hoặc chuyển sang chế độ Chat để trò chuyện tự do với AI</p>
+                    <button onclick="switchView('chat')" class="px-8 py-4 rounded-2xl bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 text-white text-lg font-bold transition-all inline-flex items-center gap-3 shadow-xl">
+                        <i data-lucide="arrow-right" size="24"></i> Chuyển sang Chat
+                    </button>
+                </div>
             </div>
         `;
     } else {
         return `
-            <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-8 text-center">
-                <i data-lucide="construction" size="48" class="${styles.textSecondary} mx-auto mb-4"></i>
-                <h3 class="text-xl font-bold ${styles.textPrimary} mb-2">Đang phát triển</h3>
+            <div class="${styles.cardBg} border ${styles.border} rounded-3xl p-12 text-center">
+                <i data-lucide="construction" size="64" class="${styles.textSecondary} mx-auto mb-6 opacity-30"></i>
+                <h3 class="text-2xl font-bold ${styles.textPrimary} mb-3">Đang phát triển</h3>
                 <p class="${styles.textSecondary}">Tính năng này sẽ sớm được ra mắt</p>
             </div>
         `;
@@ -4350,6 +4466,14 @@ Nội dung: ${text}`;
 function setLearningTab(tab) {
     state.learningTab = tab;
     renderApp();
+}
+
+function setLearningSearch(term) {
+    state.learningSearch = term;
+    renderApp();
+    setTimeout(() => {
+        document.getElementById('learning-search-input')?.focus();
+    }, 100);
 }
 
 function useLearningPrompt(promptId) {
