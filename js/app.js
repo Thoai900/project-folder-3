@@ -505,7 +505,7 @@ async function submitLearningPrompt() {
     
     try {
         state.isLoadingPrompts = true;
-        render();
+        renderApp();
         
         // Send to Gemini to process and expand the content
         const enhancedContent = await callGeminiAPI(`
@@ -521,12 +521,12 @@ Hãy phân tích và trình bày lại nội dung này một cách có cấu tr�
         textarea.value = '';
         
         state.isLoadingPrompts = false;
-        render();
+        renderApp();
         showToast('Nội dung đã được xử lý thành công!', 'success');
     } catch (error) {
         console.error('Error processing prompt:', error);
         state.isLoadingPrompts = false;
-        render();
+        renderApp();
         showToast('Lỗi xử lý nội dung: ' + error.message, 'error');
     }
 }
@@ -538,7 +538,7 @@ async function handleLearningFileUpload(event) {
     
     try {
         state.isLoadingPrompts = true;
-        render();
+        renderApp();
         
         for (const file of files) {
             const fileType = file.type;
@@ -605,13 +605,13 @@ async function handleLearningFileUpload(event) {
         event.target.value = '';
         
         state.isLoadingPrompts = false;
-        render();
+        renderApp();
         showToast(`Đã tải lên ${files.length} tệp`, 'success');
         
     } catch (error) {
         console.error('Error uploading files:', error);
         state.isLoadingPrompts = false;
-        render();
+        renderApp();
         showToast('Lỗi tải tệp lên: ' + error.message, 'error');
     }
 }
@@ -677,13 +677,13 @@ async function processLearningAction(action) {
         });
         
         state.isLoadingPrompts = false;
-        render();
+        renderApp();
         showToast('Xử lý thành công!', 'success');
         
     } catch (error) {
         console.error('Error processing learning action:', error);
         state.isLoadingPrompts = false;
-        render();
+        renderApp();
         showToast('Lỗi xử lý: ' + error.message, 'error');
     }
 }
@@ -696,13 +696,13 @@ function removeLearningFile(index) {
         .map(f => `### Tài liệu: ${f.name}\n\n${f.content}`)
         .join('\n\n');
     
-    render();
+    renderApp();
     showToast('Đã xóa tệp', 'info');
 }
 
 function removeLearningResult(index) {
     state.learningResults.splice(index, 1);
-    render();
+    renderApp();
     showToast('Đã xóa kết quả', 'info');
 }
 
@@ -716,44 +716,59 @@ function clearLearningContext() {
     const textarea = document.getElementById('learning-prompt-input');
     if (textarea) textarea.value = '';
     
-    render();
+    renderApp();
     showToast('Đã xóa toàn bộ', 'info');
 }
 
 function loadPromptTemplate() {
+    console.log('loadPromptTemplate called');
+    
     // Set flag that we're selecting prompt for Learning Space
     state.selectingForLearning = true;
     
     // Switch to library view
-    state.activeView = 'library';
-    render();
+    state.currentView = 'library';
+    
+    console.log('State updated:', { selectingForLearning: state.selectingForLearning, currentView: state.currentView });
+    
+    renderApp();
     
     showToast('Chọn prompt từ thư viện để sử dụng', 'info');
 }
 
 function selectPromptForLearning(promptId) {
+    console.log('selectPromptForLearning called with promptId:', promptId);
+    console.log('Available prompts count:', state.prompts.length);
+    
     const prompt = state.prompts.find(p => p.id === promptId);
     if (!prompt) {
         console.error('Prompt not found:', promptId);
+        console.log('All prompt IDs:', state.prompts.map(p => p.id));
         showToast('Không tìm thấy prompt', 'error');
         return;
     }
+    
+    console.log('Found prompt:', prompt.title);
     
     // Save to learning context
     state.learningSelectedPrompt = prompt;
     
     // Switch back to learning space
     state.selectingForLearning = false;
-    state.activeView = 'learning';
+    state.currentView = 'learning';
     
-    render();
+    console.log('Switching to learning view');
+    
+    renderApp();
     
     // Auto-fill the textarea
     setTimeout(() => {
         const textarea = document.getElementById('learning-prompt-input');
+        console.log('Textarea found:', !!textarea);
         if (textarea) {
             textarea.value = prompt.content;
             textarea.focus();
+            console.log('Textarea filled with content');
         }
         lucide.createIcons();
     }, 100);
@@ -763,8 +778,8 @@ function selectPromptForLearning(promptId) {
 
 function cancelSelectingForLearning() {
     state.selectingForLearning = false;
-    state.activeView = 'learning';
-    render();
+    state.currentView = 'learning';
+    renderApp();
 }
 
 
