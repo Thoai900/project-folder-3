@@ -1623,6 +1623,28 @@ async function runPrompt() {
             }
         }
         
+        // Lưu responseText vào state để các function khác có thể truy cập
+        const resultIndex = state.chatHistory.length - 1;
+        
+        // Thêm action buttons cho kết quả AI
+        const actionButtonsHTML = `
+            <div class="flex gap-2 mt-4 flex-wrap">
+                <button onclick="summarizeResult(${resultIndex})" class="px-4 py-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 border border-blue-500/30 text-xs font-bold transition-all flex items-center gap-2">
+                    <i data-lucide="file-text" size="14"></i> Tóm tắt
+                </button>
+                <button onclick="createFlashcards(${resultIndex})" class="px-4 py-2 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 border border-purple-500/30 text-xs font-bold transition-all flex items-center gap-2">
+                    <i data-lucide="credit-card" size="14"></i> Flashcard
+                </button>
+                <button onclick="createQuiz(${resultIndex})" class="px-4 py-2 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-500 border border-green-500/30 text-xs font-bold transition-all flex items-center gap-2">
+                    <i data-lucide="help-circle" size="14"></i> Câu hỏi
+                </button>
+                <button onclick="copyToClipboard(\`${responseText.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" class="px-4 py-2 rounded-lg bg-gray-500/10 hover:bg-gray-500/20 text-gray-500 border border-gray-500/30 text-xs font-bold transition-all flex items-center gap-2">
+                    <i data-lucide="copy" size="14"></i> Sao chép
+                </button>
+            </div>
+        `;
+        aiContentElement.insertAdjacentHTML('afterend', actionButtonsHTML);
+        
         // Tạo icons Lucide
         lucide.createIcons();
         chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -3948,6 +3970,166 @@ function renderShareModal(container) {
 }
 
 // ==========================================
+// ==========================================
+// AI Result Enhancement Functions
+// ==========================================
+
+// Tóm tắt kết quả
+async function summarizeResult(resultIndex) {
+    const text = state.chatHistory[resultIndex]?.content;
+    if (!text) return;
+    
+    const chatContainer = document.getElementById('chat-container');
+    const styles = getStyles();
+    
+    const loadingId = 'loading-summary-' + Date.now();
+    const loadingHTML = `
+        <div id="${loadingId}" class="flex gap-4 justify-start">
+            <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mt-1"><i data-lucide="loader-2" class="animate-spin text-white" size="16"></i></div>
+            <div class="${styles.cardBg} rounded-2xl p-4 border ${styles.border}">
+                <div class="flex gap-1"><span class="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></span><span class="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-75"></span><span class="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-150"></span></div>
+            </div>
+        </div>
+    `;
+    chatContainer.insertAdjacentHTML('beforeend', loadingHTML);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    try {
+        const prompt = `Hãy tóm tắt nội dung sau đây một cách ngắn gọn và súc tích, nêu các ý chính:\n\n${text}`;
+        const summary = await callGeminiAPI(prompt);
+        
+        document.getElementById(loadingId).remove();
+        
+        const summaryHTML = `
+            <div class="flex gap-4 justify-start">
+                <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mt-1 shadow-lg"><i data-lucide="file-text" class="text-white" size="16"></i></div>
+                <div class="max-w-[85%] rounded-2xl p-5 shadow-md ${styles.cardBg} border border-blue-500/30 ${styles.textPrimary} rounded-tl-sm">
+                    <h4 class="font-bold text-blue-500 mb-2">📝 Tóm tắt</h4>
+                    <div class="whitespace-pre-wrap text-sm leading-relaxed">${simpleMarkdown(summary)}</div>
+                </div>
+            </div>
+        `;
+        chatContainer.insertAdjacentHTML('beforeend', summaryHTML);
+        lucide.createIcons();
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        showToast("Đã tạo tóm tắt!");
+    } catch (error) {
+        document.getElementById(loadingId).remove();
+        showToast("Lỗi khi tạo tóm tắt: " + error.message);
+    }
+}
+
+// Tạo flashcards
+async function createFlashcards(resultIndex) {
+    const text = state.chatHistory[resultIndex]?.content;
+    if (!text) return;
+    
+    const chatContainer = document.getElementById('chat-container');
+    const styles = getStyles();
+    
+    const loadingId = 'loading-flashcard-' + Date.now();
+    const loadingHTML = `
+        <div id="${loadingId}" class="flex gap-4 justify-start">
+            <div class="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center mt-1"><i data-lucide="loader-2" class="animate-spin text-white" size="16"></i></div>
+            <div class="${styles.cardBg} rounded-2xl p-4 border ${styles.border}">
+                <div class="flex gap-1"><span class="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></span><span class="w-2 h-2 bg-purple-400 rounded-full animate-bounce delay-75"></span><span class="w-2 h-2 bg-purple-400 rounded-full animate-bounce delay-150"></span></div>
+            </div>
+        </div>
+    `;
+    chatContainer.insertAdjacentHTML('beforeend', loadingHTML);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    try {
+        const prompt = `Từ nội dung sau, hãy tạo 5-7 flashcard để ôn tập. Mỗi flashcard có:
+- Mặt trước (câu hỏi/khái niệm)
+- Mặt sau (câu trả lời/giải thích)
+
+Format:
+---
+[Mặt trước]
+Câu hỏi hoặc khái niệm
+
+[Mặt sau]
+Câu trả lời hoặc giải thích chi tiết
+---
+
+Nội dung: ${text}`;
+        
+        const flashcards = await callGeminiAPI(prompt);
+        
+        document.getElementById(loadingId).remove();
+        
+        const flashcardHTML = `
+            <div class="flex gap-4 justify-start">
+                <div class="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center mt-1 shadow-lg"><i data-lucide="credit-card" class="text-white" size="16"></i></div>
+                <div class="max-w-[85%] rounded-2xl p-5 shadow-md ${styles.cardBg} border border-purple-500/30 ${styles.textPrimary} rounded-tl-sm">
+                    <h4 class="font-bold text-purple-500 mb-2">🎴 Flashcards ôn tập</h4>
+                    <div class="whitespace-pre-wrap text-sm leading-relaxed">${simpleMarkdown(flashcards)}</div>
+                </div>
+            </div>
+        `;
+        chatContainer.insertAdjacentHTML('beforeend', flashcardHTML);
+        lucide.createIcons();
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        showToast("Đã tạo flashcards!");
+    } catch (error) {
+        document.getElementById(loadingId).remove();
+        showToast("Lỗi khi tạo flashcards: " + error.message);
+    }
+}
+
+// Tạo câu hỏi kiểm tra
+async function createQuiz(resultIndex) {
+    const text = state.chatHistory[resultIndex]?.content;
+    if (!text) return;
+    
+    const chatContainer = document.getElementById('chat-container');
+    const styles = getStyles();
+    
+    const loadingId = 'loading-quiz-' + Date.now();
+    const loadingHTML = `
+        <div id="${loadingId}" class="flex gap-4 justify-start">
+            <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center mt-1"><i data-lucide="loader-2" class="animate-spin text-white" size="16"></i></div>
+            <div class="${styles.cardBg} rounded-2xl p-4 border ${styles.border}">
+                <div class="flex gap-1"><span class="w-2 h-2 bg-green-400 rounded-full animate-bounce"></span><span class="w-2 h-2 bg-green-400 rounded-full animate-bounce delay-75"></span><span class="w-2 h-2 bg-green-400 rounded-full animate-bounce delay-150"></span></div>
+            </div>
+        </div>
+    `;
+    chatContainer.insertAdjacentHTML('beforeend', loadingHTML);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    try {
+        const prompt = `Dựa trên nội dung sau, hãy tạo 5 câu hỏi kiểm tra (trắc nghiệm hoặc tự luận) để đánh giá mức độ hiểu biết. 
+Mỗi câu hỏi nên có:
+- Câu hỏi
+- Đáp án đúng (nếu là trắc nghiệm thì có 4 lựa chọn A, B, C, D)
+- Giải thích ngắn gọn
+
+Nội dung: ${text}`;
+        
+        const quiz = await callGeminiAPI(prompt);
+        
+        document.getElementById(loadingId).remove();
+        
+        const quizHTML = `
+            <div class="flex gap-4 justify-start">
+                <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center mt-1 shadow-lg"><i data-lucide="help-circle" class="text-white" size="16"></i></div>
+                <div class="max-w-[85%] rounded-2xl p-5 shadow-md ${styles.cardBg} border border-green-500/30 ${styles.textPrimary} rounded-tl-sm">
+                    <h4 class="font-bold text-green-500 mb-2">❓ Câu hỏi kiểm tra</h4>
+                    <div class="whitespace-pre-wrap text-sm leading-relaxed">${simpleMarkdown(quiz)}</div>
+                </div>
+            </div>
+        `;
+        chatContainer.insertAdjacentHTML('beforeend', quizHTML);
+        lucide.createIcons();
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        showToast("Đã tạo câu hỏi kiểm tra!");
+    } catch (error) {
+        document.getElementById(loadingId).remove();
+        showToast("Lỗi khi tạo câu hỏi: " + error.message);
+    }
+}
+
 // Phone OTP Authentication Modal
 // ==========================================
 window.onload = () => {
