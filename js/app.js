@@ -955,42 +955,42 @@ function applyTheme() {
     }
 }
 
-function showToast(message) {
+// ==============================
+// Global Progress Bar Controls
+// ==============================
+const ProgressBar = {
+    el: null,
+    init() {
+        this.el = document.getElementById('global-progress');
+    },
+    start() {
+        if (!this.el) this.init();
+        if (!this.el) return;
+        this.el.style.width = '0%';
+        this.el.style.opacity = '1';
+        // Kick off with small progress then grow slowly
+        setTimeout(() => { this.set(20); }, 50);
+        this._interval && clearInterval(this._interval);
+        this._interval = setInterval(() => {
+            const current = parseFloat(this.el.style.width) || 0;
+            if (current < 90) this.set(current + Math.random() * 10);
+        }, 500);
+    },
+    set(n) {
+        if (!this.el) this.init();
+        if (!this.el) return;
+        this.el.style.width = Math.min(100, Math.max(0, n)) + '%';
+    },
+    done() {
+        if (!this.el) this.init();
+        if (!this.el) return;
+        this.set(100);
+        this._interval && clearInterval(this._interval);
+        setTimeout(() => { this.el.style.opacity = '0'; this.el.style.width = '0%'; }, 300);
+    }
+};
 
-    // ==============================
-    // Global Progress Bar Controls
-    // ==============================
-    const ProgressBar = {
-        el: null,
-        init() {
-            this.el = document.getElementById('global-progress');
-        },
-        start() {
-            if (!this.el) this.init();
-            if (!this.el) return;
-            this.el.style.width = '0%';
-            this.el.style.opacity = '1';
-            // Kick off with small progress then grow slowly
-            setTimeout(() => { this.set(20); }, 50);
-            this._interval && clearInterval(this._interval);
-            this._interval = setInterval(() => {
-                const current = parseFloat(this.el.style.width) || 0;
-                if (current < 90) this.set(current + Math.random() * 10);
-            }, 500);
-        },
-        set(n) {
-            if (!this.el) this.init();
-            if (!this.el) return;
-            this.el.style.width = Math.min(100, Math.max(0, n)) + '%';
-        },
-        done() {
-            if (!this.el) this.init();
-            if (!this.el) return;
-            this.set(100);
-            this._interval && clearInterval(this._interval);
-            setTimeout(() => { this.el.style.opacity = '0'; this.el.style.width = '0%'; }, 300);
-        }
-    };
+function showToast(message) {
     const container = document.getElementById('toast-container');
     const content = document.getElementById('toast-content');
     const msgSpan = document.getElementById('toast-message');
