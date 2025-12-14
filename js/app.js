@@ -2312,6 +2312,7 @@ function renderApp() {
 
 function renderHeader() {
     const styles = getStyles();
+    const headerBtnClasses = `inline-flex items-center gap-2 px-3 py-2 rounded-full border ${styles.border} ${styles.iconBg} text-xs font-semibold hover:border-indigo-500/50 hover:text-indigo-500 transition-colors`;
     let userSectionHTML = '';
 
     if (state.currentUser) {
@@ -2321,7 +2322,7 @@ function renderHeader() {
 
         userSectionHTML = `
             <div class="flex items-center gap-3 relative group/profile cursor-pointer">
-                <button onclick="toggleTheme(); renderApp();" class="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-full border ${styles.border} ${styles.iconBg} text-xs font-semibold hover:border-indigo-500/50 hover:text-indigo-500 transition-colors">
+                <button onclick="toggleTheme(); renderApp();" class="hidden sm:${headerBtnClasses}">
                     <i data-lucide="sun" class="${styles.textSecondary}" size="16"></i>
                     <span class="${styles.textSecondary}">Sáng/Tối</span>
                 </button>
@@ -2355,34 +2356,24 @@ function renderHeader() {
     } else {
         userSectionHTML = `
             <div class="flex items-center gap-3">
-                <button onclick="toggleTheme(); renderApp();" class="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-full border ${styles.border} ${styles.iconBg} text-xs font-semibold hover:border-indigo-500/50 hover:text-indigo-500 transition-colors">
+                <button onclick="toggleTheme(); renderApp();" class="hidden sm:${headerBtnClasses}">
                     <i data-lucide="sun" class="${styles.textSecondary}" size="16"></i>
                     <span class="${styles.textSecondary}">Sáng/Tối</span>
                 </button>
-                <button onclick="openModal('login')" class="px-5 py-2.5 rounded-full font-medium text-sm transition-all duration-300 border ${styles.border} ${state.theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}">
-                Đăng nhập
+                <button onclick="openModal('login')" class="${headerBtnClasses}">
+                    <i data-lucide="log-in" size="16"></i>
+                    <span>Đăng nhập</span>
                 </button>
             </div>
         `;
     }
 
     const quickAction = (icon, label, action, isPrimary = false) => {
-        const baseClasses = 'btn-core flex items-center gap-2 px-5 py-2.5 text-sm';
-        let styleClasses = '';
-        
-        // Phân biệt hiệu ứng riêng cho từng nút
-        if (label === 'Thư viện') {
-            styleClasses = `btn-nav-library ${styles.textPrimary}`;
-        } else if (label === 'Showcase') {
-            styleClasses = `btn-nav-showcase ${styles.textPrimary}`;
-        } else if (isPrimary) {
-            styleClasses = 'btn-primary text-white shadow-lg';
-        } else {
-            styleClasses = `btn-glass ${styles.textPrimary}`;
-        }
-        
+        const base = headerBtnClasses;
+        const primary = `inline-flex items-center gap-2 px-3 py-2 rounded-full ${getColorClass('bg')} ${getColorClass('bg-hover')} text-white text-xs font-semibold shadow-md`;
+        const classes = isPrimary ? primary : `${base} ${styles.textPrimary}`;
         return `
-            <button onclick="${action}" class="${baseClasses} ${styleClasses}">
+            <button onclick="${action}" class="${classes}">
                 <i data-lucide="${icon}" size="16"></i>
                 <span>${label}</span>
             </button>
