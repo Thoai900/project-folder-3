@@ -3848,6 +3848,11 @@ function renderLoginModal(container) {
                         </div>
                     </div>
 
+                    <div class="flex items-center justify-between text-xs ${styles.textSecondary}">
+                        <span>Email chưa được xác minh?</span>
+                        <button type="button" onclick="resendVerificationEmailFromForm()" class="text-indigo-500 font-semibold hover:underline">Gửi lại email xác minh</button>
+                    </div>
+
                     <button type="submit" id="auth-btn" class="btn-core btn-primary w-full px-6 py-4 text-white text-lg shadow-lg flex items-center justify-center gap-2">
                         Đăng nhập ngay
                     </button>

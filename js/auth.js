@@ -128,6 +128,36 @@ async function firebaseLogin(email, password) {
     }
 }
 
+// Gửi lại email xác minh dựa trên thông tin form (email + mật khẩu)
+async function resendVerificationEmailFromForm() {
+    try {
+        const email = document.querySelector('#auth-form input[name="email"]')?.value?.trim();
+        const password = document.querySelector('#auth-form input[name="password"]')?.value;
+
+        if (!email || !password) {
+            showToast('Nhập email và mật khẩu để gửi lại xác minh', 'warning');
+            return;
+        }
+
+        const cred = await window.firebaseSignInWithEmailAndPassword(window.firebaseAuth, email, password);
+        const user = cred.user;
+
+        if (user.emailVerified) {
+            showToast('Email đã được xác minh trước đó', 'info');
+        } else {
+            if (window.firebaseSendEmailVerification) {
+                await window.firebaseSendEmailVerification(user);
+            }
+            showToast('Đã gửi lại email xác minh. Kiểm tra hộp thư.', 'success');
+        }
+
+        await window.firebaseSignOut(window.firebaseAuth);
+    } catch (error) {
+        console.error('❌ Lỗi gửi lại email xác minh:', error);
+        showToast('Không thể gửi lại email xác minh. Kiểm tra thông tin đăng nhập.', 'error');
+    }
+}
+
 /**
  * Đăng xuất khỏi tài khoản
  * @returns {Promise}
