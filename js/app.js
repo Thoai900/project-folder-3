@@ -1008,6 +1008,7 @@ function escapeRegExp(str) {
 function simpleMarkdown(text) {
     if (!text) return '';
     let codeBlocks = [];
+    let mathBlocks = [];
     
     // Lưu code blocks để xử lý sau
     let cleanText = text.replace(/```([\s\S]*?)```/g, (match, content) => {
@@ -1016,6 +1017,19 @@ function simpleMarkdown(text) {
     });
     
     cleanText = escapeHtml(cleanText);
+
+    // Detect block math $$...$$ and inline math $...$ (avoid code blocks already extracted)
+    // Store math content to render later with KaTeX
+    // Block math
+    cleanText = cleanText.replace(/\$\$([\s\S]*?)\$\$/g, (match, content) => {
+        const idx = mathBlocks.push({ type: 'block', content: content.trim() }) - 1;
+        return `__MATHBLOCK_${idx}__`;
+    });
+    // Inline math (single-line, avoid matching escaped \$)
+    cleanText = cleanText.replace(/(^|[^\\])\$([^$\n]+)\$/g, (match, prefix, content) => {
+        const idx = mathBlocks.push({ type: 'inline', content: content.trim() }) - 1;
+        return `${prefix}__MATHINLINE_${idx}__`;
+    });
     
     // Xử lý Markdown formatting
     let html = cleanText
@@ -1087,6 +1101,19 @@ function simpleMarkdown(text) {
                     </div>
                     <div class="p-4 overflow-x-auto custom-scrollbar"><code class="font-mono text-sm whitespace-pre ${state.theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}">${displayContent}</code></div>
                 </div>`;
+    });
+
+    // Replace math placeholders with elements to be rendered by KaTeX later
+    html = html.replace(/__MATHBLOCK_(\d+)__/g, (match, index) => {
+        const m = mathBlocks[Number(index)];
+        const styles = getStyles();
+        const safe = m.content;
+        return `<div class="my-3 p-3 rounded-lg ${state.theme === 'dark' ? 'bg-slate-800/50' : 'bg-slate-50'} border ${styles.border}"><span class="math-block">${safe}</span></div>`;
+    });
+    html = html.replace(/__MATHINLINE_(\d+)__/g, (match, index) => {
+        const m = mathBlocks[Number(index)];
+        const safe = m.content;
+        return `<span class="math-inline">${safe}</span>`;
     });
     
     return `<div class="markdown-body leading-7 text-sm space-y-3 w-full whitespace-pre-wrap ${state.theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}">${html}</div>`;
@@ -1961,6 +1988,21 @@ function typeWriter(element, htmlContent, speed = 100) {
             if (charCount >= fullText.length) {
                 // Hoàn tất
                 element.innerHTML = htmlContent;
+                // Render KaTeX math if available
+                if (window.katex) {
+                    try {
+                        const inlineEls = element.querySelectorAll('.math-inline');
+                        inlineEls.forEach(el => {
+                            const tex = el.textContent;
+                            if (tex) window.katex.render(tex, el, { throwOnError: false });
+                        });
+                        const blockEls = element.querySelectorAll('.math-block');
+                        blockEls.forEach(el => {
+                            const tex = el.textContent;
+                            if (tex) window.katex.render(tex, el, { displayMode: true, throwOnError: false });
+                        });
+                    } catch (e) {}
+                }
                 
                 // Highlight code blocks
                 const codeElements = element.querySelectorAll('pre code');
@@ -2012,6 +2054,25 @@ function typeWriter(element, htmlContent, speed = 100) {
                         
                         // Render HTML
                         element.innerHTML = builtHTML;
+                        // Attempt incremental math render for already inserted elements
+                        if (window.katex) {
+                            try {
+                                const inlineEls = element.querySelectorAll('.math-inline');
+                                inlineEls.forEach(el => {
+                                    if (!el.getAttribute('data-rendered')) {
+                                        const tex = el.textContent;
+                                        if (tex) { window.katex.render(tex, el, { throwOnError: false }); el.setAttribute('data-rendered', '1'); }
+                                    }
+                                });
+                                const blockEls = element.querySelectorAll('.math-block');
+                                blockEls.forEach(el => {
+                                    if (!el.getAttribute('data-rendered')) {
+                                        const tex = el.textContent;
+                                        if (tex) { window.katex.render(tex, el, { displayMode: true, throwOnError: false }); el.setAttribute('data-rendered', '1'); }
+                                    }
+                                });
+                            } catch (e) {}
+                        }
                         
                         // Highlight code blocks
                         const codeElements = element.querySelectorAll('pre code');
