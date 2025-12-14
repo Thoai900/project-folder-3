@@ -19,19 +19,18 @@ module.exports = async function handler(req, res) {
     }
 
     try {
-        // Extract and verify Firebase ID Token
+        // Extract and verify Firebase ID Token (optional - allow anonymous access)
         const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ error: 'Missing or invalid Authorization header. Please login first.' });
-        }
-
-        const idToken = authHeader.substring(7);
-        let decodedToken;
-        try {
-            decodedToken = await admin.auth().verifyIdToken(idToken);
-        } catch (error) {
-            console.error('Token verification failed:', error.message);
-            return res.status(401).json({ error: 'Invalid or expired token. Please login again.' });
+        let decodedToken = null;
+        
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const idToken = authHeader.substring(7);
+            try {
+                decodedToken = await admin.auth().verifyIdToken(idToken);
+            } catch (error) {
+                console.warn('Token verification failed (continuing anyway):', error.message);
+                // Continue without authentication
+            }
         }
 
         // Extract prompt and temperature from request body
