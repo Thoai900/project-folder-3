@@ -2172,24 +2172,24 @@ async function runPrompt() {
         // Lưu responseText vào state để các function khác có thể truy cập
         const resultIndex = state.chatHistory.length - 1;
         
-        // Thêm action buttons cho kết quả AI
+        // Thêm action buttons nhỏ dưới chân khung trả lời của AI
         const actionButtonsHTML = `
-            <div class="flex gap-2 mt-4 flex-wrap">
-                <button onclick="summarizeResult(${resultIndex})" class="px-4 py-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 border border-blue-500/30 text-xs font-bold transition-all flex items-center gap-2">
-                    <i data-lucide="file-text" size="14"></i> Tóm tắt
+            <div class="flex items-center gap-2 mt-3 pt-2 border-t ${styles.border}">
+                <button aria-label="Tóm tắt" onclick="summarizeResult(${resultIndex})" class="p-2 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 border border-blue-500/30 transition-all">
+                    <i data-lucide="file-text" size="16"></i>
                 </button>
-                <button onclick="createFlashcards(${resultIndex})" class="px-4 py-2 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 border border-purple-500/30 text-xs font-bold transition-all flex items-center gap-2">
-                    <i data-lucide="credit-card" size="14"></i> Flashcard
+                <button aria-label="Flashcards" onclick="createFlashcards(${resultIndex})" class="p-2 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 border border-purple-500/30 transition-all">
+                    <i data-lucide="credit-card" size="16"></i>
                 </button>
-                <button onclick="createQuiz(${resultIndex})" class="px-4 py-2 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-500 border border-green-500/30 text-xs font-bold transition-all flex items-center gap-2">
-                    <i data-lucide="help-circle" size="14"></i> Câu hỏi
+                <button aria-label="Câu hỏi" onclick="createQuiz(${resultIndex})" class="p-2 rounded-full bg-green-500/10 hover:bg-green-500/20 text-green-500 border border-green-500/30 transition-all">
+                    <i data-lucide="help-circle" size="16"></i>
                 </button>
-                <button onclick="copyToClipboard(\`${responseText.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" class="px-4 py-2 rounded-lg bg-gray-500/10 hover:bg-gray-500/20 text-gray-500 border border-gray-500/30 text-xs font-bold transition-all flex items-center gap-2">
-                    <i data-lucide="copy" size="14"></i> Sao chép
+                <button aria-label="Sao chép" onclick="copyToClipboard(\`${responseText.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" class="p-2 rounded-full bg-gray-500/10 hover:bg-gray-500/20 text-gray-500 border border-gray-500/30 transition-all ml-auto">
+                    <i data-lucide="copy" size="16"></i>
                 </button>
             </div>
         `;
-        aiContentElement.insertAdjacentHTML('afterend', actionButtonsHTML);
+        aiContentElement.insertAdjacentHTML('beforeend', actionButtonsHTML);
         
         // Tạo icons Lucide
         lucide.createIcons();
