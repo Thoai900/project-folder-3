@@ -460,19 +460,20 @@ function getColorClass(type) {
     }
 }
 
-// Empty-state overlay renderer
+// Empty-state toast renderer (bottom-right, auto-hide)
 function renderEmptyOverlay(title = 'Không tìm thấy dữ liệu', message = 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm', imageSrc = 'images/Trạng thái rỗng.png') {
     const styles = getStyles();
     return `
-        <div class="fixed inset-0 z-[60] flex items-center justify-center ${styles.overlay}">
-            <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-8 w-[420px] text-center animate-popIn shadow-xl">
-                <img src="${imageSrc}" alt="Empty" class="w-40 h-40 mx-auto mb-4 object-contain" />
-                <h3 class="text-xl font-bold ${styles.textPrimary} mb-1">${title}</h3>
-                <p class="${styles.textSecondary} mb-6">${message}</p>
-                <div class="flex gap-2 justify-center">
-                    <button onclick="closeModal?.()" class="px-4 py-2 rounded-lg ${styles.iconBg} border ${styles.border} ${styles.textPrimary}">Đóng</button>
-                    <button onclick="state.searchTerm=''; state.activeSubject=null; renderApp();" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold">Xóa bộ lọc</button>
+        <div class="fixed bottom-4 right-4 z-[60] animate-emptyToast">
+            <div class="${styles.cardBg} border ${styles.border} rounded-xl p-3 shadow-lg flex items-center gap-3 max-w-[340px]">
+                <img src="${imageSrc}" alt="Empty" class="w-10 h-10 rounded-lg object-contain" />
+                <div class="min-w-0">
+                    <h4 class="text-sm font-bold ${styles.textPrimary} truncate">${title}</h4>
+                    <p class="text-xs ${styles.textSecondary} truncate">${message}</p>
                 </div>
+                <button aria-label="Close" onclick="this.closest('[class*=animate-emptyToast]')?.remove()" class="ml-auto p-1 rounded-md ${styles.iconBg} border ${styles.border} ${styles.textSecondary} hover:${styles.textPrimary}">
+                    <i data-lucide="x" size="14"></i>
+                </button>
             </div>
         </div>
     `;
