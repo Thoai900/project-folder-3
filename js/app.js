@@ -3852,6 +3852,9 @@ function renderLoginModal(container) {
                         <span id="auth-switch-text">Chưa có tài khoản?</span>
                         <button onclick="toggleAuthMode()" class="text-[#1a73e8] font-semibold hover:underline ml-1" id="auth-switch-btn">Tạo tài khoản</button>
                     </div>
+                    <div class="text-center mt-2">
+                        <button type="button" onclick="clearLocalAuthData()" class="text-xs ${styles.textSecondary} hover:text-red-500 underline">Xóa dữ liệu đăng nhập trên thiết bị này</button>
+                    </div>
                 </div>
             </div>
         `;

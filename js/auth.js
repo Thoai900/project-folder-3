@@ -175,6 +175,32 @@ async function firebaseLogout() {
     }
 }
 
+// Xóa toàn bộ dữ liệu đăng nhập phía client (localStorage) và sign-out
+async function clearLocalAuthData() {
+    try {
+        localStorage.removeItem('pm_currentUser');
+        localStorage.removeItem('pm_users');
+        localStorage.removeItem('pm_api_key');
+        // Nếu muốn xóa luôn dữ liệu prompt cache cũ, bỏ comment dòng dưới
+        // localStorage.removeItem('pm_prompts');
+
+        if (window.firebaseAuth?.currentUser) {
+            await window.firebaseSignOut(window.firebaseAuth);
+        }
+
+        state.currentUser = null;
+        state.users = [];
+        state.learningSessions = [];
+        state.activeLearningSessionId = null;
+
+        showToast('Đã xóa dữ liệu đăng nhập cục bộ', 'success');
+        renderApp();
+    } catch (error) {
+        console.error('❌ Lỗi xóa dữ liệu local auth:', error);
+        showToast('Không thể xóa dữ liệu đăng nhập cục bộ', 'error');
+    }
+}
+
 /**
  * Gửi email reset mật khẩu
  * @param {string} email - Email người dùng
