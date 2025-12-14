@@ -2257,6 +2257,7 @@ async function runPrompt() {
         }
 
         const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Không có phản hồi từ AI.";
+        const provider = data.provider || 'gemini';
         
         document.getElementById(loadingId).remove();
         state.chatHistory.push({ role: 'ai', content: responseText });
@@ -2265,7 +2266,11 @@ async function runPrompt() {
         const aiMsgHTML = `
             <div class="flex gap-4 justify-start">
                 <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center mt-1 shadow-lg shadow-indigo-600/30 flex-shrink-0"><i data-lucide="bot" class="text-white" size="16"></i></div>
-                <div class="ai-message-content max-w-[85%] rounded-2xl p-5 shadow-md ${styles.cardBg} border ${styles.border} ${styles.textPrimary} rounded-tl-sm min-h-[2rem]">
+                <div class="ai-message-content max-w-[85%] rounded-2xl p-5 shadow-md ${styles.cardBg} border ${styles.border} ${styles.textPrimary} rounded-tl-sm min-h-[2rem] relative">
+                    <span class="absolute top-2 right-3 text-[10px] px-2 py-0.5 rounded-full border ${styles.border} ${styles.iconBg} ${styles.textSecondary} flex items-center gap-1">
+                        <i data-lucide="sparkles" size="12"></i>
+                        ${provider === 'openai' ? 'OpenAI' : 'Gemini'}
+                    </span>
                     <!-- Content will be filled by typeWriter -->
                 </div>
             </div>
