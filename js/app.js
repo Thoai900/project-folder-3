@@ -460,6 +460,24 @@ function getColorClass(type) {
     }
 }
 
+// Empty-state overlay renderer
+function renderEmptyOverlay(title = 'Không tìm thấy dữ liệu', message = 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm', imageSrc = 'images/Trạng thái rỗng.png') {
+    const styles = getStyles();
+    return `
+        <div class="fixed inset-0 z-[60] flex items-center justify-center ${styles.overlay}">
+            <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-8 w-[420px] text-center animate-popIn shadow-xl">
+                <img src="${imageSrc}" alt="Empty" class="w-40 h-40 mx-auto mb-4 object-contain" />
+                <h3 class="text-xl font-bold ${styles.textPrimary} mb-1">${title}</h3>
+                <p class="${styles.textSecondary} mb-6">${message}</p>
+                <div class="flex gap-2 justify-center">
+                    <button onclick="closeModal?.()" class="px-4 py-2 rounded-lg ${styles.iconBg} border ${styles.border} ${styles.textPrimary}">Đóng</button>
+                    <button onclick="state.searchTerm=''; state.activeSubject=null; renderApp();" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold">Xóa bộ lọc</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 
 
 
@@ -2163,10 +2181,13 @@ function renderLibrary() {
         
         const matchesSubject = state.activeCategory === "Giáo dục" && state.activeSubject 
             ? p.tags.some(t => t === state.activeSubject) 
-            : true;
+            const isEmpty = !state.isLoadingPrompts && filteredPrompts.length === 0;
 
-        return matchesSearch && matchesCategory && matchesSubject;
-    });
+            return `
+                ${renderHero()}
+                <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28 animate-slideUp relative z-10">
+                    ${isEmpty ? renderEmptyOverlay('No Data Found', 'Không tìm thấy prompt phù hợp. Hãy thử từ khóa khác hoặc xóa bộ lọc.') : ''}
+                    ${state.selectingForLearning ? `
 
     return `
         ${renderHero()}
@@ -3120,7 +3141,9 @@ function renderLearningMainContent() {
                             ${simpleMarkdown(state.learningContext)}
                         </div>
                     </div>
-                ` : ''}
+                ` : `
+                    ${renderEmptyOverlay('No Data Found', 'Chưa có nội dung học tập. Nhập prompt hoặc tải tài liệu để bắt đầu.')}
+                `}
                 
                 ${state.learningResults.length > 0 ? state.learningResults.map((result, idx) => `
                     <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6 mb-4 animate-fadeIn">
