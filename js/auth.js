@@ -190,9 +190,12 @@ async function firebaseLoginWithGoogle() {
             return { success: false, error: 'Google Auth not available' };
         }
 
+        console.log('🔄 Đang bắt đầu Google OAuth popup...');
         const result = await window.firebaseSignInWithPopup(window.firebaseAuth, window.firebaseGoogleAuthProvider);
         const user = result.user;
         const userId = user.uid;
+
+        console.log('✅ Google OAuth thành công. Email verified:', user.emailVerified, 'UID:', userId);
 
         // Kiểm tra user đã tồn tại trong DB chưa
         const userRef = window.firebaseRef(window.firebaseDB, `users/${userId}`);
@@ -200,6 +203,7 @@ async function firebaseLoginWithGoogle() {
 
         if (!snapshot.exists()) {
             // Tạo user profile nếu chưa tồn tại
+            console.log('📝 Tạo user profile mới cho:', user.email);
             await window.firebaseSet(userRef, {
                 id: userId,
                 email: user.email || '',
@@ -221,6 +225,7 @@ async function firebaseLoginWithGoogle() {
             });
         } else {
             // Cập nhật lastLogin
+            console.log('🔄 Cập nhật lastLogin cho user:', userId);
             await window.firebaseUpdate(userRef, {
                 lastLogin: new Date().toISOString()
             });
@@ -228,18 +233,34 @@ async function firebaseLoginWithGoogle() {
 
         console.log('✅ Đăng nhập Google thành công:', userId);
         showToast(`✓ Chào mừng ${user.displayName || user.email}!`);
+        
+        // Đóng modal và refresh app (watchAuthState sẽ tự động load dữ liệu người dùng)
+        if (typeof closeModal === 'function') {
+            closeModal();
+        }
+        if (typeof renderApp === 'function') {
+            renderApp();
+        }
+        
         return { success: true, userId };
     } catch (error) {
-        console.error('❌ Lỗi đăng nhập Google:', error.message);
+        console.error('❌ Lỗi đăng nhập Google:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
         
         let errorMsg = 'Không thể đăng nhập với Google.';
         if (error.code === 'auth/popup-closed-by-user') {
-            errorMsg = 'Cửa sổ đăng nhập bị đóng.';
+            errorMsg = 'Cửa sổ đăng nhập bị đóng. Vui lòng thử lại.';
         } else if (error.code === 'auth/popup-blocked') {
-            errorMsg = 'Cửa sổ đăng nhập bị chặn. Vui lòng cho phép pop-up.';
+            errorMsg = 'Cửa sổ đăng nhập bị chặn. Vui lòng cho phép pop-up trong trình duyệt.';
+        } else if (error.code === 'auth/account-exists-with-different-credential') {
+            errorMsg = 'Email này đã được đăng ký. Vui lòng đăng nhập bằng email/mật khẩu.';
+        } else if (error.code === 'auth/invalid-api-key') {
+            errorMsg = 'Cấu hình Firebase không hợp lệ. Vui lòng liên hệ hỗ trợ.';
         }
         
         showToast(`❌ ${errorMsg}`);
+        console.error('Full error:', error);
         return { success: false, error: error.message };
     }
 }
@@ -367,8 +388,15 @@ function watchAuthState(callback) {
     return window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
         if (user) {
             console.log('✅ Người dùng đăng nhập:', user.uid);
+            console.log('📧 Email verified:', user.emailVerified);
+            console.log('🔐 Auth providers:', user.providerData?.map(p => p.providerId));
 
-            if (!user.emailVerified) {
+            // Google OAuth users có email đã được verify tự động
+            // Chỉ yêu cầu email verification cho email/password users
+            const isGoogleUser = user.providerData?.some(p => p.providerId === 'google.com');
+            
+            if (!user.emailVerified && !isGoogleUser) {
+                console.warn('⚠️ Email chưa xác minh cho user email/password');
                 showToast('Email chưa xác minh. Vui lòng kiểm tra hộp thư.', 'warning');
                 if (window.firebaseSendEmailVerification) {
                     await window.firebaseSendEmailVerification(user);
