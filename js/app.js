@@ -3788,81 +3788,70 @@ function renderLoginModal(container) {
     } else {
         // Nếu chưa đăng nhập
         container.innerHTML = `
-            <div class="p-8 h-full flex flex-col items-center justify-center">
-                <div class="text-center mb-8">
-                    <div class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 mx-auto mb-4">
-                        <i data-lucide="user-circle" class="text-white" size="32"></i>
-                    </div>
-                    <h2 class="text-3xl font-bold ${styles.textPrimary} mb-2" id="auth-title">Đăng nhập</h2>
-                    <p class="${styles.textSecondary}">Tham gia cộng đồng để lưu trữ Prompt của riêng bạn.</p>
-                </div>
-                
-                <form id="auth-form" onsubmit="handleLogin(event)" class="w-full space-y-4">
-                    <div id="name-field" class="hidden">
-                        <label class="block text-sm font-medium ${styles.textSecondary} mb-2">Tên hiển thị</label>
-                        <div class="relative">
-                            <i data-lucide="user" size="18" class="absolute left-4 top-3.5 ${styles.textSecondary}"></i>
-                            <input type="text" name="name" class="w-full ${styles.inputBg} border ${styles.border} rounded-xl pl-12 pr-4 py-3 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all" placeholder="VD: Minh Nhật">
-                        </div>
+            <div class="min-h-full w-full flex items-center justify-center py-8">
+                <div class="w-full max-w-[420px] rounded-2xl border ${styles.border} ${styles.cardBg} shadow-xl p-8 space-y-6">
+                    <div class="flex flex-col items-center text-center space-y-2">
+                        <div class="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-[20px] font-bold text-[#4285F4]">G</div>
+                        <h2 class="text-2xl font-semibold ${styles.textPrimary}" id="auth-title">Đăng nhập</h2>
+                        <p class="text-sm ${styles.textSecondary}">Sử dụng email của bạn để tiếp tục</p>
                     </div>
 
-                    <div id="user-type-field" class="hidden space-y-3">
-                        <label class="block text-sm font-medium ${styles.textSecondary} mb-3">Bạn là:</label>
-                        <div class="grid grid-cols-2 gap-3" id="user-type-options">
-                            <label class="relative cursor-pointer user-type-option" data-type="student">
-                                <input type="radio" name="userType" value="student" checked class="absolute opacity-0 w-full h-full cursor-pointer" onchange="updateUserTypeDisplay()">
-                                <div class="user-type-box p-4 rounded-xl border-2 border-indigo-200 hover:border-indigo-500 transition-all text-center bg-indigo-500/10">
-                                    <i data-lucide="book-open" size="24" class="mx-auto mb-2 text-blue-500"></i>
-                                    <p class="font-bold text-sm ${styles.textPrimary}">Học sinh</p>
-                                </div>
-                            </label>
-                            <label class="relative cursor-pointer user-type-option" data-type="teacher">
-                                <input type="radio" name="userType" value="teacher" class="absolute opacity-0 w-full h-full cursor-pointer" onchange="updateUserTypeDisplay()">
-                                <div class="user-type-box p-4 rounded-xl border-2 border-slate-300 hover:border-indigo-500 transition-all text-center hover:bg-indigo-500/5">
-                                    <i data-lucide="graduation-cap" size="24" class="mx-auto mb-2 text-purple-500"></i>
-                                    <p class="font-bold text-sm ${styles.textPrimary}">Giáo viên</p>
-                                </div>
-                            </label>
+                    <form id="auth-form" onsubmit="handleLogin(event)" class="space-y-4">
+                        <div id="name-field" class="hidden">
+                            <label class="block text-sm font-medium ${styles.textSecondary} mb-1">Tên hiển thị</label>
+                            <input type="text" name="name" class="w-full ${styles.inputBg} border ${styles.border} rounded-lg px-3 py-3 ${styles.textPrimary} outline-none focus:border-[#4285F4] focus:ring-2 focus:ring-[#4285F4]/30" placeholder="VD: Minh Nhật">
                         </div>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium ${styles.textSecondary} mb-2">Email</label>
-                        <div class="relative">
-                            <i data-lucide="mail" size="18" class="absolute left-4 top-3.5 ${styles.textSecondary}"></i>
-                            <input type="email" name="email" required class="w-full ${styles.inputBg} border ${styles.border} rounded-xl pl-12 pr-4 py-3 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all" placeholder="name@example.com">
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <label class="block text-sm font-medium ${styles.textSecondary}">Mật khẩu</label>
-                            <button type="button" onclick="handleForgotPassword()" class="text-xs text-indigo-500 hover:underline">Quên mật khẩu?</button>
-                        </div>
-                        <div class="relative">
-                            <i data-lucide="lock" size="18" class="absolute left-4 top-3.5 ${styles.textSecondary}"></i>
-                            <input type="password" name="password" required class="w-full ${styles.inputBg} border ${styles.border} rounded-xl pl-12 pr-12 py-3 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all" placeholder="••••••••">
-                            <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-3.5 text-slate-400 hover:text-indigo-500 transition-colors">
-                                <i id="password-eye" data-lucide="eye" size="18"></i>
-                            </button>
-                        </div>
-                    </div>
 
-                    <div class="flex items-center justify-between text-xs ${styles.textSecondary}">
-                        <span>Email chưa được xác minh?</span>
-                        <button type="button" onclick="resendVerificationEmailFromForm()" class="text-indigo-500 font-semibold hover:underline">Gửi lại email xác minh</button>
-                    </div>
+                        <div id="user-type-field" class="hidden space-y-2">
+                            <label class="block text-sm font-medium ${styles.textSecondary}">Bạn là:</label>
+                            <div class="grid grid-cols-2 gap-2" id="user-type-options">
+                                <label class="relative cursor-pointer user-type-option" data-type="student">
+                                    <input type="radio" name="userType" value="student" checked class="absolute opacity-0 w-full h-full cursor-pointer" onchange="updateUserTypeDisplay()">
+                                    <div class="user-type-box p-3 rounded-lg border border-slate-200 hover:border-[#4285F4] transition-all text-center">
+                                        <p class="font-semibold text-sm ${styles.textPrimary}">Học sinh</p>
+                                    </div>
+                                </label>
+                                <label class="relative cursor-pointer user-type-option" data-type="teacher">
+                                    <input type="radio" name="userType" value="teacher" class="absolute opacity-0 w-full h-full cursor-pointer" onchange="updateUserTypeDisplay()">
+                                    <div class="user-type-box p-3 rounded-lg border border-slate-200 hover:border-[#4285F4] transition-all text-center">
+                                        <p class="font-semibold text-sm ${styles.textPrimary}">Giáo viên</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-1">
+                            <label class="block text-sm font-medium ${styles.textSecondary}">Email</label>
+                            <input type="email" name="email" required class="w-full ${styles.inputBg} border ${styles.border} rounded-lg px-3 py-3 ${styles.textPrimary} outline-none focus:border-[#4285F4] focus:ring-2 focus:ring-[#4285F4]/30" placeholder="name@example.com">
+                        </div>
+                        
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between">
+                                <label class="block text-sm font-medium ${styles.textSecondary}">Mật khẩu</label>
+                                <button type="button" onclick="handleForgotPassword()" class="text-xs text-[#4285F4] hover:underline">Quên mật khẩu?</button>
+                            </div>
+                            <div class="relative">
+                                <input type="password" name="password" required class="w-full ${styles.inputBg} border ${styles.border} rounded-lg px-3 pr-10 py-3 ${styles.textPrimary} outline-none focus:border-[#4285F4] focus:ring-2 focus:ring-[#4285F4]/30" placeholder="••••••••">
+                                <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#4285F4] transition-colors">
+                                    <i id="password-eye" data-lucide="eye" size="18"></i>
+                                </button>
+                            </div>
+                        </div>
 
-                    <button type="submit" id="auth-btn" class="btn-core btn-primary w-full px-6 py-4 text-white text-lg shadow-lg flex items-center justify-center gap-2">
-                        Đăng nhập ngay
-                    </button>
-                </form>
+                        <div class="flex items-center justify-between text-xs ${styles.textSecondary}">
+                            <span>Email chưa được xác minh?</span>
+                            <button type="button" onclick="resendVerificationEmailFromForm()" class="text-[#4285F4] font-semibold hover:underline">Gửi lại email xác minh</button>
+                        </div>
 
-                <div class="mt-6 text-center">
-                    <p class="${styles.textSecondary} text-sm">
+                        <button type="submit" id="auth-btn" class="w-full bg-[#1a73e8] hover:bg-[#1765cb] text-white font-semibold rounded-lg py-3 shadow-sm transition-colors flex items-center justify-center gap-2">
+                            Đăng nhập
+                        </button>
+                    </form>
+
+                    <div class="text-center text-sm ${styles.textSecondary}">
                         <span id="auth-switch-text">Chưa có tài khoản?</span>
-                        <button onclick="toggleAuthMode()" class="text-indigo-500 font-bold hover:underline ml-1" id="auth-switch-btn">Đăng ký</button>
-                    </p>
+                        <button onclick="toggleAuthMode()" class="text-[#1a73e8] font-semibold hover:underline ml-1" id="auth-switch-btn">Tạo tài khoản</button>
+                    </div>
                 </div>
             </div>
         `;
