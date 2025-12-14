@@ -9,7 +9,7 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'refinePrompt') {
         // Forward refine request to API
-        fetch('https://project-folder-1.vercel.app/api/refine-prompt', {
+        fetch('https://project-folder-3.vercel.app/api/refine-prompt', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
