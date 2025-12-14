@@ -2380,20 +2380,37 @@ async function runPrompt() {
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
     } catch (error) {
+        console.error('❌ Lỗi runPrompt:', error);
         document.getElementById(loadingId)?.remove();
         ProgressBar.done();
+        
+        let errorMsg = error.message || 'Lỗi không xác định';
+        let detailMsg = '';
+        
+        // Parse error message để hiển thị thân thiện hơn
+        if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
+            detailMsg = 'Không thể kết nối đến server. Kiểm tra kết nối mạng.';
+        } else if (errorMsg.includes('401') || errorMsg.includes('Unauthorized')) {
+            detailMsg = 'Lỗi xác thực. Thử đăng nhập lại.';
+        } else if (errorMsg.includes('API') || errorMsg.includes('key')) {
+            detailMsg = 'Lỗi API Key. Liên hệ admin để được hỗ trợ.';
+        } else {
+            detailMsg = errorMsg;
+        }
+        
         const errorHTML = `
             <div class="flex gap-4 justify-start">
                 <div class="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center mt-1"><i data-lucide="alert-triangle" class="text-white" size="16"></i></div>
                 <div class="max-w-[85%] rounded-2xl p-4 bg-red-500/10 border border-red-500/30 text-red-500 text-sm">
-                    <strong>Lỗi kết nối:</strong> ${error.message}
-                    <br/><br/>Gợi ý: Kiểm tra lại kết nối mạng hoặc API Key.
+                    <strong>⚠️ Lỗi:</strong> ${detailMsg}
+                    <br/><span class="text-xs opacity-70 mt-1 block">Chi tiết: ${errorMsg}</span>
                 </div>
             </div>
         `;
         chatContainer.insertAdjacentHTML('beforeend', errorHTML);
         lucide.createIcons();
         chatContainer.scrollTop = chatContainer.scrollHeight;
+        showToast("❌ Lỗi khi gọi AI");
     }
 }
 
