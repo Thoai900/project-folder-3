@@ -2164,10 +2164,9 @@ function renderBottomNav() {
 
 function renderLibrary() {
     const styles = getStyles();
-    
     const filteredPrompts = state.prompts.filter(p => {
         const matchesSearch = p.title.toLowerCase().includes(state.searchTerm.toLowerCase()) || p.tags.some(t => t.toLowerCase().includes(state.searchTerm.toLowerCase()));
-        
+
         let matchesCategory = false;
         if (state.activeCategory === "Tất cả") {
             matchesCategory = true;
@@ -2178,16 +2177,15 @@ function renderLibrary() {
         } else {
             matchesCategory = p.category === state.activeCategory;
         }
-        
-        const matchesSubject = state.activeCategory === "Giáo dục" && state.activeSubject 
-            ? p.tags.some(t => t === state.activeSubject) 
-            const isEmpty = !state.isLoadingPrompts && filteredPrompts.length === 0;
 
-            return `
-                ${renderHero()}
-                <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28 animate-slideUp relative z-10">
-                    ${isEmpty ? renderEmptyOverlay('No Data Found', 'Không tìm thấy prompt phù hợp. Hãy thử từ khóa khác hoặc xóa bộ lọc.') : ''}
-                    ${state.selectingForLearning ? `
+        const matchesSubject = (state.activeCategory === "Giáo dục" && state.activeSubject)
+            ? p.tags.some(t => t === state.activeSubject)
+            : true;
+
+        return matchesSearch && matchesCategory && matchesSubject;
+    });
+
+    const isEmpty = !state.isLoadingPrompts && filteredPrompts.length === 0;
 
     return `
         ${renderHero()}
@@ -2206,6 +2204,7 @@ function renderLibrary() {
                     </button>
                 </div>
             ` : ''}
+
             <div class="flex gap-2 overflow-x-auto pb-4 scrollbar-hide snap-x mb-2">
                 ${CATEGORIES.map(cat => {
                     if (cat === "Cá nhân" && !state.currentUser) return '';
@@ -2219,7 +2218,7 @@ function renderLibrary() {
 
             ${state.activeCategory === "Giáo dục" ? `
                 <div class="flex gap-2 overflow-x-auto pb-6 scrollbar-hide snap-x mb-2 animate-fadeIn">
-                     <button onclick="setSubject(null)" class="whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-300 snap-center border ${styles.border} ${!state.activeSubject ? 'bg-emerald-500 text-white shadow-md' : `${styles.glass} ${styles.textSecondary} hover:bg-emerald-500/10`}">
+                    <button onclick="setSubject(null)" class="whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-300 snap-center border ${styles.border} ${!state.activeSubject ? 'bg-emerald-500 text-white shadow-md' : `${styles.glass} ${styles.textSecondary} hover:bg-emerald-500/10`}">
                         Tất cả
                     </button>
                     ${SUBJECT_LIST.map(sub => `
@@ -2237,6 +2236,8 @@ function renderLibrary() {
                 </h2>
                 <span class="${styles.textSecondary} font-mono text-xs ${styles.glass} px-3 py-1 rounded-full border ${styles.border}">${filteredPrompts.length} kết quả</span>
             </div>
+
+            ${isEmpty ? renderEmptyOverlay('No Data Found', 'Không tìm thấy prompt phù hợp. Hãy thử từ khóa khác hoặc xóa bộ lọc.') : ''}
 
             ${state.isLoadingPrompts
                 ? renderSkeletonLoader(6)
