@@ -251,7 +251,9 @@ let state = {
     learningSearch: '',
     learningContext: '', // Nội dung từ prompt hoặc file
     learningFiles: [], // Danh sách files đã upload
-    learningResults: [] // Kết quả từ các công cụ
+    learningResults: [], // Kết quả từ các công cụ
+    selectingForLearning: false, // Đang chọn prompt cho Learning Space
+    learningSelectedPrompt: null // Prompt đã chọn
 };
 
 // ==========================================
@@ -704,61 +706,45 @@ function clearLearningContext() {
 }
 
 function loadPromptTemplate() {
-    // Open modal to choose from MASTER_PROMPTS
-    showModal('Chọn prompt mẫu', (container) => {
-        const styles = getStyles();
-        
-        // Group prompts by category
-        const promptsByCategory = {};
-        MASTER_PROMPTS.forEach(prompt => {
-            if (!promptsByCategory[prompt.category]) {
-                promptsByCategory[prompt.category] = [];
-            }
-            promptsByCategory[prompt.category].push(prompt);
-        });
-        
-        container.innerHTML = `
-            <div class="p-6 space-y-4">
-                <p class="${styles.textSecondary} text-sm">Chọn một prompt từ thư viện để sử dụng trong không gian học tập:</p>
-                
-                <div class="max-h-[500px] overflow-y-auto space-y-4 custom-scrollbar pr-2">
-                    ${Object.keys(promptsByCategory).map(category => `
-                        <div>
-                            <h4 class="font-bold ${styles.textPrimary} mb-2 px-2 py-1 ${styles.iconBg} rounded-lg inline-block text-sm">
-                                ${category}
-                            </h4>
-                            <div class="space-y-2 mt-2">
-                                ${promptsByCategory[category].map((prompt) => `
-                                    <button onclick="selectPromptTemplate(${prompt.id})" class="w-full text-left p-3 rounded-lg ${styles.inputBg} border ${styles.border} hover:border-indigo-500/50 hover:shadow-md transition-all">
-                                        <p class="font-bold ${styles.textPrimary} mb-1 text-sm">${prompt.title}</p>
-                                        <p class="text-xs ${styles.textSecondary} line-clamp-1">${prompt.description}</p>
-                                    </button>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-                
-                <button onclick="closeModal()" class="w-full py-3 rounded-lg ${styles.iconBg} border ${styles.border} ${styles.textPrimary} font-bold">
-                    Đóng
-                </button>
-            </div>
-        `;
-        lucide.createIcons();
-    });
+    // Set flag that we're selecting prompt for Learning Space
+    state.selectingForLearning = true;
+    
+    // Switch to library view
+    state.activeView = 'library';
+    render();
+    
+    showToast('Chọn prompt từ thư viện để sử dụng', 'info');
 }
 
-function selectPromptTemplate(promptId) {
+function selectPromptForLearning(promptId) {
     const prompt = MASTER_PROMPTS.find(p => p.id === promptId);
     if (!prompt) return;
     
-    const textarea = document.getElementById('learning-prompt-input');
-    if (textarea) {
-        textarea.value = prompt.content;
-    }
+    // Save to learning context
+    state.learningSelectedPrompt = prompt;
     
-    closeModal();
+    // Switch back to learning space
+    state.selectingForLearning = false;
+    state.activeView = 'learning';
+    
+    render();
+    
+    // Auto-fill the textarea
+    setTimeout(() => {
+        const textarea = document.getElementById('learning-prompt-input');
+        if (textarea) {
+            textarea.value = prompt.content;
+            textarea.focus();
+        }
+    }, 100);
+    
     showToast(`Đã chọn: ${prompt.title}`, 'success');
+}
+
+function cancelSelectingForLearning() {
+    state.selectingForLearning = false;
+    state.activeView = 'learning';
+    render();
 }
 
 
@@ -2148,6 +2134,20 @@ function renderLibrary() {
     return `
         ${renderHero()}
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28 animate-slideUp relative z-10">
+            ${state.selectingForLearning ? `
+                <div class="mb-6 ${styles.cardBg} border-2 border-purple-500/50 rounded-xl p-4 flex items-center justify-between animate-pulse">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="book-open" class="text-purple-500" size="24"></i>
+                        <div>
+                            <p class="font-bold ${styles.textPrimary}">Đang chọn prompt cho Không gian học tập</p>
+                            <p class="text-sm ${styles.textSecondary}">Click vào biểu tượng 📖 ở prompt để chọn</p>
+                        </div>
+                    </div>
+                    <button onclick="cancelSelectingForLearning()" class="px-4 py-2 rounded-lg ${styles.iconBg} border ${styles.border} ${styles.textPrimary} hover:bg-red-500/10 hover:border-red-500/50 transition-all">
+                        <i data-lucide="x" size="16" class="inline mr-1"></i> Hủy
+                    </button>
+                </div>
+            ` : ''}
             <div class="flex gap-2 overflow-x-auto pb-4 scrollbar-hide snap-x mb-2">
                 ${CATEGORIES.map(cat => {
                     if (cat === "Cá nhân" && !state.currentUser) return '';
@@ -2739,10 +2739,14 @@ function renderPromptCard(prompt) {
                     ${prompt.tags.slice(0, 2).map(tag => `<span class="text-xs ${styles.textSecondary} font-medium">#${tag}</span>`).join('')}
                 </div>
                 <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-2 group-hover:translate-y-0">
-                    <button onclick="switchToChatMode(${prompt.id})" class="p-2 bg-emerald-500/10 hover:bg-emerald-500/30 text-emerald-600 rounded-lg transition-colors" title="Chạy thử (chế độ chat)"><i data-lucide="play" size="16" fill="currentColor"></i></button>
-                    <button onclick="openQuickTestModal(${prompt.id})" class="p-2 bg-indigo-500/10 hover:bg-indigo-500/30 text-indigo-600 rounded-lg transition-colors" title="Test nhanh (popup)"><i data-lucide="sparkles" size="16"></i></button>
+                    ${state.selectingForLearning ? `
+                        <button onclick="selectPromptForLearning(${prompt.id})" class="p-2 bg-purple-500/10 hover:bg-purple-500/30 text-purple-600 rounded-lg transition-colors" title="Sử dụng trong Học tập"><i data-lucide="book-open" size="16"></i></button>
+                    ` : `
+                        <button onclick="switchToChatMode(${prompt.id})" class="p-2 bg-emerald-500/10 hover:bg-emerald-500/30 text-emerald-600 rounded-lg transition-colors" title="Chạy thử (chế độ chat)"><i data-lucide="play" size="16" fill="currentColor"></i></button>
+                        <button onclick="openQuickTestModal(${prompt.id})" class="p-2 bg-indigo-500/10 hover:bg-indigo-500/30 text-indigo-600 rounded-lg transition-colors" title="Test nhanh (popup)"><i data-lucide="sparkles" size="16"></i></button>
+                    `}
                     <button onclick='copyToClipboard(\`${prompt.content.replace(/`/g, "\\`").replace(/\n/g, "\\n")}\`)' class="p-2 bg-indigo-500/10 hover:bg-indigo-500/30 text-indigo-600 rounded-lg transition-colors" title="Sao chép"><i data-lucide="copy" size="16"></i></button>
-                    ${state.currentUser ? `<button onclick="deletePrompt(${prompt.id})" class="p-2 bg-red-500/10 hover:bg-red-500/30 text-red-600 rounded-lg transition-colors" title="Xóa prompt"><i data-lucide="trash-2" size="16"></i></button>` : ''}
+                    ${state.currentUser && !state.selectingForLearning ? `<button onclick="deletePrompt(${prompt.id})" class="p-2 bg-red-500/10 hover:bg-red-500/30 text-red-600 rounded-lg transition-colors" title="Xóa prompt"><i data-lucide="trash-2" size="16"></i></button>` : ''}
                 </div>
             </div>
         </div>
