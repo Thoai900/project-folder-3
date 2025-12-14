@@ -732,8 +732,12 @@ function loadPromptTemplate() {
 }
 
 function selectPromptForLearning(promptId) {
-    const prompt = MASTER_PROMPTS.find(p => p.id === promptId);
-    if (!prompt) return;
+    const prompt = state.prompts.find(p => p.id === promptId);
+    if (!prompt) {
+        console.error('Prompt not found:', promptId);
+        showToast('Không tìm thấy prompt', 'error');
+        return;
+    }
     
     // Save to learning context
     state.learningSelectedPrompt = prompt;
@@ -751,6 +755,7 @@ function selectPromptForLearning(promptId) {
             textarea.value = prompt.content;
             textarea.focus();
         }
+        lucide.createIcons();
     }, 100);
     
     showToast(`Đã chọn: ${prompt.title}`, 'success');
@@ -2753,16 +2758,19 @@ function renderPromptCard(prompt) {
                 <div class="flex gap-2">
                     ${prompt.tags.slice(0, 2).map(tag => `<span class="text-xs ${styles.textSecondary} font-medium">#${tag}</span>`).join('')}
                 </div>
-                <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-2 group-hover:translate-y-0">
-                    ${state.selectingForLearning ? `
-                        <button onclick="selectPromptForLearning(${prompt.id})" class="p-2 bg-purple-500/10 hover:bg-purple-500/30 text-purple-600 rounded-lg transition-colors" title="Sử dụng trong Học tập"><i data-lucide="book-open" size="16"></i></button>
-                    ` : `
+                ${state.selectingForLearning ? `
+                    <!-- Always visible button when selecting for learning -->
+                    <button onclick="selectPromptForLearning(${prompt.id})" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white rounded-lg transition-all font-bold text-sm shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center gap-2">
+                        <i data-lucide="book-open" size="16"></i> Chọn
+                    </button>
+                ` : `
+                    <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-2 group-hover:translate-y-0">
                         <button onclick="switchToChatMode(${prompt.id})" class="p-2 bg-emerald-500/10 hover:bg-emerald-500/30 text-emerald-600 rounded-lg transition-colors" title="Chạy thử (chế độ chat)"><i data-lucide="play" size="16" fill="currentColor"></i></button>
                         <button onclick="openQuickTestModal(${prompt.id})" class="p-2 bg-indigo-500/10 hover:bg-indigo-500/30 text-indigo-600 rounded-lg transition-colors" title="Test nhanh (popup)"><i data-lucide="sparkles" size="16"></i></button>
-                    `}
-                    <button onclick='copyToClipboard(\`${prompt.content.replace(/`/g, "\\`").replace(/\n/g, "\\n")}\`)' class="p-2 bg-indigo-500/10 hover:bg-indigo-500/30 text-indigo-600 rounded-lg transition-colors" title="Sao chép"><i data-lucide="copy" size="16"></i></button>
-                    ${state.currentUser && !state.selectingForLearning ? `<button onclick="deletePrompt(${prompt.id})" class="p-2 bg-red-500/10 hover:bg-red-500/30 text-red-600 rounded-lg transition-colors" title="Xóa prompt"><i data-lucide="trash-2" size="16"></i></button>` : ''}
-                </div>
+                        <button onclick='copyToClipboard(\`${prompt.content.replace(/`/g, "\\`").replace(/\n/g, "\\n")}\`)' class="p-2 bg-indigo-500/10 hover:bg-indigo-500/30 text-indigo-600 rounded-lg transition-colors" title="Sao chép"><i data-lucide="copy" size="16"></i></button>
+                        ${state.currentUser ? `<button onclick="deletePrompt(${prompt.id})" class="p-2 bg-red-500/10 hover:bg-red-500/30 text-red-600 rounded-lg transition-colors" title="Xóa prompt"><i data-lucide="trash-2" size="16"></i></button>` : ''}
+                    </div>
+                `}
             </div>
         </div>
     `;
