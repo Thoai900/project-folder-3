@@ -33,16 +33,16 @@ module.exports = async function handler(req, res) {
             }
         }
 
-        // Extract prompt and temperature from request body
-        const { prompt, temperature = 0.7 } = req.body;
+        // Extract prompt, userApiKey and temperature from request body
+        const { prompt, temperature = 0.7, userApiKey } = req.body;
 
         // Validate input
         if (!prompt || typeof prompt !== 'string') {
             return res.status(400).json({ error: 'Missing or invalid "prompt" in request body.' });
         }
 
-        // Get API key from environment variables (prefer Gemini, fallback OpenAI)
-        const geminiKey = process.env.GEMINI_API_KEY;
+        // Get API key from environment variables OR user-provided key (prefer Gemini, fallback OpenAI)
+        let geminiKey = userApiKey || process.env.GEMINI_API_KEY;
         const openaiKey = process.env.OPENAI_API_KEY;
         
         if (!geminiKey && !openaiKey) {

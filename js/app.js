@@ -512,17 +512,22 @@ function toggleTheme() {
 }
 
 // Generic Gemini caller with auth token
-async function callGeminiAPI(prompt) {
+async function callGeminiAPI(prompt, useUserKey = false) {
     const url = '/api/gemini';
     const idToken = await getFirebaseIdToken();
 
     const headers = { 'Content-Type': 'application/json' };
     if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
 
+    const body = { prompt };
+    if (useUserKey && state.userApiKey) {
+        body.userApiKey = state.userApiKey;
+    }
+
     const response = await fetch(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ prompt })
+        body: JSON.stringify(body)
     });
 
     const data = await response.json();
@@ -543,8 +548,16 @@ async function submitLearningPrompt() {
         return;
     }
     
+    // Check API key availability
+    const useUserKey = state.userApiKey ? true : false;
+    if (!useUserKey && !window.firebaseAuth?.currentUser) {
+        showToast('Vui lòng đăng nhập hoặc thêm API key để sử dụng tính năng này', 'warning');
+        return;
+    }
+    
     try {
         state.isLoadingPrompts = true;
+        ProgressBar.start();
         renderApp();
         
         // Send to Gemini to process and expand the content
@@ -554,11 +567,18 @@ Bạn là một trợ lý giáo dục thông minh. Người dùng đã cung cấ
 ${content}
 
 Hãy phân tích và trình bày lại nội dung này một cách có cấu trúc, dễ hiểu, chi tiết hơn. Nếu đó là câu hỏi, hãy trả lời đầy đủ. Nếu là chủ đề, hãy giải thích toàn diện.
-        `);
+        `, useUserKey);
+        
+        ProgressBar.done();
         
         // Save to context
         state.learningContext = enhancedContent;
         textarea.value = '';
+        
+        // Add gamification points
+        if (state.currentUser) {
+            addPoints(15, 'Learning prompt submitted');
+        }
         
         state.isLoadingPrompts = false;
         renderApp();
@@ -673,9 +693,17 @@ async function processLearningAction(action) {
         return;
     }
     
+    // Check API key availability
+    const useUserKey = state.userApiKey ? true : false;
+    if (!useUserKey && !window.firebaseAuth?.currentUser) {
+        showToast('Vui lòng đăng nhập hoặc thêm API key để sử dụng tính năng này', 'warning');
+        return;
+    }
+    
     try {
         state.isLoadingPrompts = true;
-        render();
+        ProgressBar.start();
+        renderApp();
         
         let prompt = '';
         let resultTitle = '';
@@ -707,7 +735,8 @@ async function processLearningAction(action) {
             resultColor = 'orange';
         }
         
-        const result = await callGeminiAPI(prompt);
+        const result = await callGeminiAPI(prompt, useUserKey);
+        ProgressBar.done();
         
         // Add to results
         state.learningResults.push({
@@ -718,15 +747,21 @@ async function processLearningAction(action) {
             timestamp: Date.now()
         });
         
+        // Add gamification points
+        if (state.currentUser) {
+            addPoints(30, 'Learning action: ' + action);
+        }
+        
         state.isLoadingPrompts = false;
         renderApp();
         showToast('Xử lý thành công!', 'success');
         
     } catch (error) {
+        ProgressBar.done();
         console.error('Error processing learning action:', error);
         state.isLoadingPrompts = false;
         renderApp();
-        showEmptyToast('Lỗi xử lý', error.message);
+        showToast('Lỗi: ' + error.message);
     }
 }
 
@@ -5761,9 +5796,11 @@ async function handleLearningImageUpload(event) {
     `;
     
     try {
+        ProgressBar.start();
         const reader = new FileReader();
         reader.onload = async (e) => {
             const base64Image = e.target.result.split(',')[1];
+            const mimeType = file.type || 'image/jpeg';
             
             const url = '/api/image-scan';
             const idToken = await getFirebaseIdToken();
@@ -5771,16 +5808,23 @@ async function handleLearningImageUpload(event) {
             const headers = { 'Content-Type': 'application/json' };
             if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
             
+            const body = { 
+                imageBase64: base64Image,
+                mimeType: mimeType,
+                action: 'analyze'
+            };
+            if (state.userApiKey) {
+                body.userApiKey = state.userApiKey;
+            }
+            
             const response = await fetch(url, {
                 method: 'POST',
                 headers,
-                body: JSON.stringify({ 
-                    imageBase64: base64Image,
-                    action: 'analyze'
-                })
+                body: JSON.stringify(body)
             });
             
             const data = await response.json();
+            ProgressBar.done();
             
             if (data.error) throw new Error(data.error);
             
@@ -5799,9 +5843,15 @@ async function handleLearningImageUpload(event) {
                 </div>
             `;
             lucide.createIcons();
+            
+            // Add gamification points
+            if (state.currentUser) {
+                addPoints(20, 'Image scan');
+            }
         };
         reader.readAsDataURL(file);
     } catch (error) {
+        ProgressBar.done();
         resultDiv.innerHTML = `
             <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
                 <p class="text-red-500 text-sm">Lỗi: ${error.message}</p>

@@ -27,7 +27,7 @@ module.exports = async function handler(req, res) {
 
     try {
         // Extract raw prompt from request body
-        const { prompt } = req.body;
+        const { prompt, userApiKey } = req.body;
 
         // Validate input
         if (!prompt || typeof prompt !== 'string') {
@@ -38,8 +38,8 @@ module.exports = async function handler(req, res) {
             return res.status(400).json({ error: 'Prompt is too short. Please provide more context.' });
         }
 
-        // Get API key from environment variables (prefer Gemini, fallback OpenAI)
-        const geminiKey = process.env.GEMINI_API_KEY;
+        // Get API key from user-provided key OR environment variables (prefer Gemini, fallback OpenAI)
+        let geminiKey = userApiKey || process.env.GEMINI_API_KEY;
         const openaiKey = process.env.OPENAI_API_KEY;
         
         if (!geminiKey && !openaiKey) {

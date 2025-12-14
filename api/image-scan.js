@@ -9,7 +9,7 @@ module.exports = async function handler(req, res) {
 
     try {
         // Extract image data and mime type from request body
-        const { imageBase64, mimeType, action = 'scan' } = req.body;
+        const { imageBase64, mimeType, action = 'scan', userApiKey } = req.body;
 
         // Validate input
         if (!imageBase64 || typeof imageBase64 !== 'string') {
@@ -20,8 +20,8 @@ module.exports = async function handler(req, res) {
             return res.status(400).json({ error: 'Missing or invalid "mimeType" in request body.' });
         }
 
-        // Get API key from environment variables (prefer Gemini, fallback OpenAI)
-        const geminiKey = process.env.GEMINI_API_KEY;
+        // Get API key from user-provided key OR environment variables (prefer Gemini, fallback OpenAI)
+        let geminiKey = userApiKey || process.env.GEMINI_API_KEY;
         const openaiKey = process.env.OPENAI_API_KEY;
         
         if (!geminiKey && !openaiKey) {
