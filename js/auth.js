@@ -179,6 +179,72 @@ async function resendVerificationEmailFromForm() {
 }
 
 /**
+ * Đăng nhập với Google
+ * @returns {Promise}
+ */
+async function firebaseLoginWithGoogle() {
+    try {
+        if (!window.firebaseGoogleAuthProvider) {
+            console.error('❌ Google Auth Provider chưa được load');
+            showToast('Google Sign-in không khả dụng. Vui lòng thử lại.', 'error');
+            return { success: false, error: 'Google Auth not available' };
+        }
+
+        const result = await window.firebaseSignInWithPopup(window.firebaseAuth, window.firebaseGoogleAuthProvider);
+        const user = result.user;
+        const userId = user.uid;
+
+        // Kiểm tra user đã tồn tại trong DB chưa
+        const userRef = window.firebaseRef(window.firebaseDB, `users/${userId}`);
+        const snapshot = await window.firebaseGet(userRef);
+
+        if (!snapshot.exists()) {
+            // Tạo user profile nếu chưa tồn tại
+            await window.firebaseSet(userRef, {
+                id: userId,
+                email: user.email || '',
+                name: user.displayName || user.email.split('@')[0],
+                userType: 'student',
+                avatar: user.photoURL || null,
+                phone: null,
+                isAnonymous: false,
+                createdAt: new Date().toISOString(),
+                lastLogin: new Date().toISOString(),
+                favorites: [],
+                friends: [],
+                customPrompts: [],
+                sharedPrompts: [],
+                settings: {
+                    theme: 'dark',
+                    language: 'vi'
+                }
+            });
+        } else {
+            // Cập nhật lastLogin
+            await window.firebaseUpdate(userRef, {
+                lastLogin: new Date().toISOString()
+            });
+        }
+
+        console.log('✅ Đăng nhập Google thành công:', userId);
+        showToast(`✓ Chào mừng ${user.displayName || user.email}!`);
+        return { success: true, userId };
+    } catch (error) {
+        console.error('❌ Lỗi đăng nhập Google:', error.message);
+        
+        let errorMsg = 'Không thể đăng nhập với Google.';
+        if (error.code === 'auth/popup-closed-by-user') {
+            errorMsg = 'Cửa sổ đăng nhập bị đóng.';
+        } else if (error.code === 'auth/popup-blocked') {
+            errorMsg = 'Cửa sổ đăng nhập bị chặn. Vui lòng cho phép pop-up.';
+        }
+        
+        showToast(`❌ ${errorMsg}`);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
  * Đăng xuất khỏi tài khoản
  * @returns {Promise}
  */
