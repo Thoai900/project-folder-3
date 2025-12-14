@@ -247,7 +247,8 @@ let state = {
     // Firebase sync
     firebaseSynced: false,
     // Learning space
-    learningTab: 'prompts'
+    learningTab: 'prompts',
+    learningSearch: ''
 };
 
 // ==========================================
@@ -1698,6 +1699,11 @@ function renderApp() {
         renderApp();
         document.getElementById('search-input').focus(); 
     });
+    document.getElementById('learning-search-input')?.addEventListener('input', (e) => {
+        state.learningSearch = e.target.value;
+        renderApp();
+        document.getElementById('learning-search-input').focus(); 
+    });
 }
 
 function renderHeader() {
@@ -1793,6 +1799,7 @@ function renderHeader() {
 
                 <div class="flex-1 hidden md:flex items-center justify-center gap-3">
                     ${quickAction('home', 'Thư viện', "switchView('library')", false)}
+                    ${quickAction('book-open', 'Học tập', "switchView('learning')", false)}
                     ${quickAction('globe-2', 'Showcase', "switchView('showcase')", false)}
                     ${quickAction('plus-circle', 'Thêm prompt', "openModal('add')", true)}
                     ${quickAction('scan', 'Quét ảnh', "openModal('scan')", true)}
@@ -2672,29 +2679,67 @@ function renderLearningContent() {
     const tab = state.learningTab || 'prompts';
     
     if (tab === 'prompts') {
+        // Lọc prompts từ thư viện (chỉ lấy category Giáo dục)
+        const searchTerm = state.learningSearch || '';
+        const learningPrompts = state.prompts.filter(p => {
+            if (p.category !== 'Giáo dục') return false;
+            if (!searchTerm) return true;
+            return p.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                   p.tags.some(t => t.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                   p.description.toLowerCase().includes(searchTerm.toLowerCase());
+        });
+        
         return `
             <div class="mb-8">
                 <h2 class="text-3xl font-bold ${styles.textPrimary} mb-2">📚 Prompt mẫu học tập</h2>
-                <p class="${styles.textSecondary}">Các prompt được thiết kế sẵn để hỗ trợ học tập hiệu quả</p>
+                <p class="${styles.textSecondary} mb-4">Các prompt được thiết kế sẵn từ thư viện để hỗ trợ học tập hiệu quả</p>
+                
+                <!-- Search bar -->
+                <div class="relative mb-6">
+                    <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 ${styles.textSecondary}" size="18"></i>
+                    <input 
+                        type="text" 
+                        id="learning-search-input"
+                        value="${searchTerm}"
+                        placeholder="Tìm kiếm prompt (Toán, Lý, Hóa, Văn...)" 
+                        class="w-full ${styles.inputBg} border ${styles.border} rounded-xl pl-12 pr-4 py-3 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all"
+                    />
+                </div>
             </div>
             
             <div class="grid md:grid-cols-2 gap-4 mb-6">
-                ${LEARNING_PROMPTS.map(prompt => `
-                    <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6 hover:border-indigo-500/50 transition-all cursor-pointer" onclick="useLearningPrompt('${prompt.id}')">
-                        <div class="flex items-start gap-4">
-                            <div class="w-12 h-12 rounded-xl ${prompt.color} flex items-center justify-center text-2xl flex-shrink-0">
-                                ${prompt.icon}
-                            </div>
-                            <div class="flex-1">
-                                <h3 class="font-bold ${styles.textPrimary} mb-1">${prompt.title}</h3>
-                                <p class="text-sm ${styles.textSecondary} mb-3">${prompt.description}</p>
-                                <div class="flex gap-2 flex-wrap">
-                                    ${prompt.tags.map(tag => `<span class="px-2 py-1 rounded-full text-xs ${styles.iconBg} ${styles.textSecondary}">${tag}</span>`).join('')}
+                ${learningPrompts.length === 0 ? `
+                    <div class="col-span-2 text-center py-12 ${styles.cardBg} border ${styles.border} rounded-2xl">
+                        <i data-lucide="search-x" size="48" class="${styles.textSecondary} mx-auto mb-3"></i>
+                        <p class="${styles.textSecondary}">Không tìm thấy prompt nào phù hợp</p>
+                    </div>
+                ` : learningPrompts.map(prompt => {
+                    // Tìm icon cho subject
+                    const subjectIcon = SUBJECT_ICONS[prompt.tags[0]] || '';
+                    
+                    return `
+                        <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6 hover:border-indigo-500/50 transition-all cursor-pointer" onclick="useLearningPrompt(${prompt.id})">
+                            <div class="flex items-start gap-4">
+                                ${subjectIcon ? `
+                                    <div class="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 ring-2 ring-white/10">
+                                        <img src="${subjectIcon}" alt="${prompt.tags[0]}" class="w-full h-full object-cover">
+                                    </div>
+                                ` : `
+                                    <div class="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-2xl flex-shrink-0">
+                                        📚
+                                    </div>
+                                `}
+                                <div class="flex-1">
+                                    <h3 class="font-bold ${styles.textPrimary} mb-1">${prompt.title}</h3>
+                                    <p class="text-sm ${styles.textSecondary} mb-3">${prompt.description}</p>
+                                    <div class="flex gap-2 flex-wrap">
+                                        ${prompt.tags.map(tag => `<span class="px-2 py-1 rounded-full text-xs ${styles.iconBg} ${styles.textSecondary}">${tag}</span>`).join('')}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                `).join('')}
+                    `;
+                }).join('')}
             </div>
         `;
     } else if (tab === 'scan') {
@@ -4308,18 +4353,19 @@ function setLearningTab(tab) {
 }
 
 function useLearningPrompt(promptId) {
-    const prompt = LEARNING_PROMPTS.find(p => p.id === promptId);
+    const prompt = state.prompts.find(p => p.id === promptId);
     if (!prompt) return;
     
     state.currentView = 'chat';
     state.chatHistory = [];
+    state.activePrompt = prompt;
     renderApp();
     
     // Set prompt vào preview
     setTimeout(() => {
         const previewPrompt = document.getElementById('preview-prompt');
         if (previewPrompt) {
-            previewPrompt.value = prompt.prompt;
+            previewPrompt.value = prompt.content;
             previewPrompt.focus();
         }
     }, 100);
