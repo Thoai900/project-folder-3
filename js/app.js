@@ -704,25 +704,38 @@ function clearLearningContext() {
 }
 
 function loadPromptTemplate() {
-    // Open modal to choose from library prompts
+    // Open modal to choose from MASTER_PROMPTS
     showModal('Chọn prompt mẫu', (container) => {
         const styles = getStyles();
-        const libraryPrompts = state.currentUser?.libraryPrompts || [];
+        
+        // Group prompts by category
+        const promptsByCategory = {};
+        MASTER_PROMPTS.forEach(prompt => {
+            if (!promptsByCategory[prompt.category]) {
+                promptsByCategory[prompt.category] = [];
+            }
+            promptsByCategory[prompt.category].push(prompt);
+        });
         
         container.innerHTML = `
             <div class="p-6 space-y-4">
                 <p class="${styles.textSecondary} text-sm">Chọn một prompt từ thư viện để sử dụng trong không gian học tập:</p>
                 
-                <div class="max-h-[400px] overflow-y-auto space-y-2 custom-scrollbar">
-                    ${libraryPrompts.length === 0 ? `
-                        <div class="text-center py-8 ${styles.textSecondary}">
-                            <p>Chưa có prompt trong thư viện</p>
+                <div class="max-h-[500px] overflow-y-auto space-y-4 custom-scrollbar pr-2">
+                    ${Object.keys(promptsByCategory).map(category => `
+                        <div>
+                            <h4 class="font-bold ${styles.textPrimary} mb-2 px-2 py-1 ${styles.iconBg} rounded-lg inline-block text-sm">
+                                ${category}
+                            </h4>
+                            <div class="space-y-2 mt-2">
+                                ${promptsByCategory[category].map((prompt) => `
+                                    <button onclick="selectPromptTemplate(${prompt.id})" class="w-full text-left p-3 rounded-lg ${styles.inputBg} border ${styles.border} hover:border-indigo-500/50 hover:shadow-md transition-all">
+                                        <p class="font-bold ${styles.textPrimary} mb-1 text-sm">${prompt.title}</p>
+                                        <p class="text-xs ${styles.textSecondary} line-clamp-1">${prompt.description}</p>
+                                    </button>
+                                `).join('')}
+                            </div>
                         </div>
-                    ` : libraryPrompts.map((prompt, idx) => `
-                        <button onclick="selectPromptTemplate(${idx})" class="w-full text-left p-4 rounded-lg ${styles.inputBg} border ${styles.border} hover:border-indigo-500/50 transition-all">
-                            <p class="font-bold ${styles.textPrimary} mb-1">${prompt.title}</p>
-                            <p class="text-xs ${styles.textSecondary} line-clamp-2">${prompt.content}</p>
-                        </button>
                     `).join('')}
                 </div>
                 
@@ -735,8 +748,8 @@ function loadPromptTemplate() {
     });
 }
 
-function selectPromptTemplate(index) {
-    const prompt = state.currentUser?.libraryPrompts?.[index];
+function selectPromptTemplate(promptId) {
+    const prompt = MASTER_PROMPTS.find(p => p.id === promptId);
     if (!prompt) return;
     
     const textarea = document.getElementById('learning-prompt-input');
@@ -745,7 +758,7 @@ function selectPromptTemplate(index) {
     }
     
     closeModal();
-    showToast('Đã chọn prompt', 'success');
+    showToast(`Đã chọn: ${prompt.title}`, 'success');
 }
 
 
