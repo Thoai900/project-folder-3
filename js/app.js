@@ -1588,6 +1588,9 @@ async function handleImageScan() {
         resultArea.value = text;
         state.scanResult = text;
         showToast("✓ Trích xuất thành công!");
+
+        // Auto-analyze scanned text for prompt vs problem
+        await analyzeScannedText(text);
     } catch (error) {
         console.error('handleImageScan Error:', error);
         showToast("✗ Lỗi: " + error.message);
@@ -1651,6 +1654,93 @@ function transferScanToadd() {
         return;
     }
     openModal('add', { content: state.scanResult });
+}
+
+async function analyzeScannedText(currentText) {
+    const styles = getStyles();
+    const url = '/api/image-scan';
+    const idToken = await getFirebaseIdToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ action: 'analyze', currentText })
+        });
+        const data = await response.json();
+        const analysis = data.analysis || {};
+
+        const container = document.getElementById('scan-result').parentElement;
+        let ui = document.getElementById('scan-analysis-ui');
+        if (!ui) {
+            ui = document.createElement('div');
+            ui.id = 'scan-analysis-ui';
+            ui.className = `mt-4 p-4 rounded-xl ${styles.cardBg} border ${styles.border}`;
+            container.parentElement.appendChild(ui);
+        }
+
+        if (analysis.type === 'prompt') {
+            const refined = analysis.refinedPrompt || currentText;
+            const vars = Array.isArray(analysis.variables) ? analysis.variables : [];
+            ui.innerHTML = `
+                <div class="space-y-3">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="wand-2" size="16" class="text-indigo-500"></i>
+                        <span class="text-sm font-bold ${styles.textPrimary}">Nhận diện: Câu lệnh Prompt</span>
+                    </div>
+                    <div class="text-xs ${styles.textSecondary}">Đề xuất tinh chỉnh và thêm vào thư viện.</div>
+                    <div class="rounded-lg ${styles.inputBg} border ${styles.border} p-3 text-xs">${escapeHtml(refined)}</div>
+                    <div class="flex items-center gap-2 text-xs ${styles.textSecondary}">
+                        <i data-lucide="list" size="14"></i><span>Biến gợi ý: ${vars.join(', ') || '—'}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="inline-flex items-center gap-2 px-3 py-2 rounded-full ${getColorClass('bg')} ${getColorClass('bg-hover')} text-white text-xs font-semibold" onclick="openModal('add', { content: '${refined.replace(/"/g, '\\"')}' })">
+                            <i data-lucide="plus-circle" size="16"></i> Thêm vào thư viện
+                        </button>
+                        <button class="inline-flex items-center gap-2 px-3 py-2 rounded-full border ${styles.border} ${styles.iconBg} text-xs font-semibold" onclick="document.getElementById('scan-result').value='${refined.replace(/"/g, '\\"')}'">
+                            <i data-lucide="edit-3" size="16"></i> Dùng prompt này
+                        </button>
+                    </div>
+                </div>
+            `;
+        } else if (analysis.type === 'problem') {
+            const suggested = Array.isArray(analysis.suggestedPrompts) ? analysis.suggestedPrompts.slice(0,4) : [];
+            const cards = suggested.map((p, idx) => `
+                <div class="p-3 rounded-lg border ${styles.border} hover:bg-white/5 transition" onclick="applySuggestedPrompt(${idx})">
+                    <p class="text-sm font-bold ${styles.textPrimary}">${escapeHtml(p.title || 'Gợi ý')}</p>
+                    <p class="text-xs ${styles.textSecondary}">${escapeHtml(p.content || '')}</p>
+                </div>
+            `).join('') || `<div class="text-xs ${styles.textSecondary}">Chưa có gợi ý. Dùng chức năng Gợi ý prompt ở dưới.</div>`;
+            ui.innerHTML = `
+                <div class="space-y-3">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="file-text" size="16" class="text-emerald-500"></i>
+                        <span class="text-sm font-bold ${styles.textPrimary}">Nhận diện: Đề bài</span>
+                    </div>
+                    <div class="text-xs ${styles.textSecondary}">Đề xuất prompt để giải đề và chèn đề bài vào biến.</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">${cards}</div>
+                </div>
+            `;
+            // Store for click handler
+            window.__lastScanSuggested = suggested;
+            window.applySuggestedPrompt = function(idx) {
+                const item = (window.__lastScanSuggested || [])[idx];
+                if (!item) return;
+                openModal('add', { content: item.content || '', title: item.title || 'Prompt gợi ý' });
+                // Replace problem into variable in preview
+                const preview = document.getElementById('preview-prompt');
+                if (preview) preview.value = (item.content || '').replace(/\[?\b(debai|problem|input)\b\]?/i, state.scanResult || currentText);
+            }
+        } else {
+            ui.innerHTML = `<div class="text-xs ${styles.textSecondary}">Không xác định được loại văn bản.</div>`;
+        }
+
+        lucide.createIcons();
+    } catch (error) {
+        console.error('analyzeScannedText error:', error);
+    }
 }
 
 function suggestPromptsFromScan() {

@@ -36,6 +36,19 @@ module.exports = async function handler(req, res) {
         } else if (action === 'refine') {
             const currentText = req.body.currentText || '';
             promptText = "Bạn là chuyên gia Prompt. Hãy viết lại văn bản sau thành một prompt hoàn chỉnh cho AI:\n" + currentText;
+        } else if (action === 'analyze') {
+            const currentText = req.body.currentText || '';
+            promptText = `Bạn là trợ lý hiểu ngữ cảnh. Phân loại văn bản sau là PROMPT hay DE BAI (đề bài). Trả về JSON với các trường:
+{
+  "type": "prompt|problem",
+  "summary": "mô tả ngắn",
+  "refinedPrompt": "nếu type=prompt: prompt đã tinh chỉnh, ngắn gọn, rõ ràng",
+  "variables": ["danh sách biến gợi ý"],
+  "suggestedPrompts": [
+     { "title": "", "content": "prompt giải bài", "variables": ["biến"] }
+  ]
+}
+Chỉ trả về JSON thuần (không markdown, không mô tả). Văn bản: ${currentText}`;
         } else {
             return res.status(400).json({ error: 'Invalid action. Use "scan" or "refine".' });
         }
@@ -87,6 +100,17 @@ module.exports = async function handler(req, res) {
                 });
             }
 
+            if (action === 'analyze') {
+                const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+                let parsed = {};
+                try {
+                    parsed = JSON.parse(raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim());
+                } catch (e) {
+                    parsed = { type: 'unknown', summary: raw };
+                }
+                return res.status(200).json({ provider: 'gemini', analysis: parsed });
+            }
+
             return res.status(200).json({ ...data, provider: 'gemini' });
         }
 
@@ -122,6 +146,16 @@ module.exports = async function handler(req, res) {
         }
 
         const text = oaData.choices?.[0]?.message?.content || '';
+
+        if (action === 'analyze') {
+            let parsed = {};
+            try {
+                parsed = JSON.parse(text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim());
+            } catch (e) {
+                parsed = { type: 'unknown', summary: text };
+            }
+            return res.status(200).json({ provider: 'openai', model: oaData.model || openaiModel, analysis: parsed });
+        }
 
         return res.status(200).json({
             provider: 'openai',
