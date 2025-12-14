@@ -2273,6 +2273,27 @@ async function runPrompt() {
     }
 }
 
+// Send a free-form chat question using the same pipeline
+async function sendChatQuestion() {
+    const input = document.getElementById('chat-question-input');
+    if (!input) return;
+    const question = input.value.trim();
+    if (!question) return;
+
+    // Route question through existing prompt runner by setting preview
+    const preview = document.getElementById('preview-prompt');
+    if (preview) preview.value = question;
+
+    // Default a mid creativity if slider not present
+    const slider = document.getElementById('temp-slider');
+    if (slider && !slider.value) slider.value = '0.7';
+
+    // Fire
+    await runPrompt();
+    // Clear input
+    input.value = '';
+}
+
 // ==========================================
 // 4. RENDER FUNCTIONS
 // ==========================================
@@ -2664,6 +2685,14 @@ function renderChatView() {
                         <div class="h-full flex flex-col items-center justify-center ${styles.textSecondary} gap-4 opacity-50">
                             <i data-lucide="bot" size="64" stroke-width="1"></i><p>Sẵn sàng trò chuyện</p>
                         </div>
+                    </div>
+                    <!-- Chat input footer -->
+                    <div class="p-4 border-t ${styles.border} ${styles.glass} flex items-center gap-3 sticky bottom-0 left-0 right-0 z-10">
+                        <input id="chat-question-input" type="text" placeholder="Đặt câu hỏi cho AI..." class="flex-1 ${styles.inputBg} border ${styles.border} rounded-full px-4 py-2 text-sm ${styles.textPrimary} outline-none focus:border-indigo-500" onkeydown="if(event.key==='Enter'){sendChatQuestion();}">
+                        <button onclick="sendChatQuestion()" class="inline-flex items-center gap-2 px-3 py-2 rounded-full ${getColorClass('bg')} ${getColorClass('bg-hover')} text-white text-xs font-semibold shadow-md">
+                            <i data-lucide="send" size="16"></i>
+                            <span>Gửi</span>
+                        </button>
                     </div>
                 </section>
             </div>
