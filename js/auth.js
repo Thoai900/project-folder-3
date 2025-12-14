@@ -46,7 +46,13 @@ async function firebaseSignUp(email, password, name, userType = 'student') {
         });
         
         console.log('✅ Đăng ký thành công:', userId);
-        showToast(`✓ Chào mừng ${name}! Đăng ký thành công.`);
+        // Gửi email xác minh
+        if (window.firebaseSendEmailVerification) {
+            await window.firebaseSendEmailVerification(user);
+            showToast(`✓ Đăng ký thành công! Kiểm tra email ${email} để xác minh.`, 'info');
+        } else {
+            showToast(`✓ Chào mừng ${name}! Đăng ký thành công.`, 'success');
+        }
         
         return { success: true, userId };
     } catch (error) {
@@ -83,6 +89,16 @@ async function firebaseLogin(email, password) {
         
         const user = userCredential.user;
         const userId = user.uid;
+
+        // Yêu cầu email đã xác minh
+        if (!user.emailVerified) {
+            if (window.firebaseSendEmailVerification) {
+                await window.firebaseSendEmailVerification(user);
+            }
+            showToast('Vui lòng xác minh email trước khi sử dụng.', 'warning');
+            await window.firebaseSignOut(window.firebaseAuth);
+            return { success: false, error: 'Email chưa xác minh' };
+        }
         
         // Cập nhật thời gian đăng nhập cuối cùng
         const userRef = window.firebaseRef(window.firebaseDB, `users/${userId}`);
@@ -209,6 +225,16 @@ function watchAuthState(callback) {
     return window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
         if (user) {
             console.log('✅ Người dùng đăng nhập:', user.uid);
+
+            if (!user.emailVerified) {
+                showToast('Email chưa xác minh. Vui lòng kiểm tra hộp thư.', 'warning');
+                if (window.firebaseSendEmailVerification) {
+                    await window.firebaseSendEmailVerification(user);
+                }
+                await window.firebaseSignOut(window.firebaseAuth);
+                callback(null);
+                return;
+            }
             
             // Lấy dữ liệu người dùng từ Database
             const userData = await getUserData(user.uid);
