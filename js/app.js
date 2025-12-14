@@ -504,7 +504,8 @@ async function submitLearningPrompt() {
     }
     
     try {
-        showLoadingOverlay('Đang xử lý nội dung...');
+        state.isLoadingPrompts = true;
+        render();
         
         // Send to Gemini to process and expand the content
         const enhancedContent = await callGeminiAPI(`
@@ -519,13 +520,14 @@ Hãy phân tích và trình bày lại nội dung này một cách có cấu tr�
         state.learningContext = enhancedContent;
         textarea.value = '';
         
+        state.isLoadingPrompts = false;
         render();
         showToast('Nội dung đã được xử lý thành công!', 'success');
-        hideLoadingOverlay();
     } catch (error) {
         console.error('Error processing prompt:', error);
-        showToast('Lỗi xử lý nội dung', 'error');
-        hideLoadingOverlay();
+        state.isLoadingPrompts = false;
+        render();
+        showToast('Lỗi xử lý nội dung: ' + error.message, 'error');
     }
 }
 
@@ -535,7 +537,8 @@ async function handleLearningFileUpload(event) {
     if (files.length === 0) return;
     
     try {
-        showLoadingOverlay('Đang xử lý tệp...');
+        state.isLoadingPrompts = true;
+        render();
         
         for (const file of files) {
             const fileType = file.type;
@@ -548,33 +551,42 @@ async function handleLearningFileUpload(event) {
             if (fileType.startsWith('image/')) {
                 // For images, use image-scan API
                 const base64 = await fileToBase64(file);
+                const idToken = await getFirebaseIdToken();
+                const headers = { 'Content-Type': 'application/json' };
+                if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
+                
                 const result = await fetch('/api/image-scan', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers,
                     body: JSON.stringify({ 
                         image: base64,
                         prompt: 'Phân tích hình ảnh này và trích xuất toàn bộ văn bản, nội dung học thuật. Nếu là sơ đồ, công thức, hãy mô tả chi tiết.'
                     })
                 });
+                
+                if (!result.ok) {
+                    throw new Error('Lỗi xử lý ảnh');
+                }
+                
                 const data = await result.json();
-                extractedContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                extractedContent = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Không thể trích xuất nội dung từ ảnh';
                 
             } else if (fileType === 'application/pdf' || fileExt === 'pdf') {
-                // For PDF, read as text (basic extraction)
-                const text = await file.text();
-                extractedContent = text;
+                // For PDF, read as text (basic extraction - limited)
+                extractedContent = `[PDF: ${fileName}]\n\nĐây là file PDF. Trình duyệt có giới hạn trong việc đọc PDF. Vui lòng copy-paste nội dung hoặc mô tả nội dung PDF này.`;
                 
             } else if (fileType.includes('word') || fileExt === 'doc' || fileExt === 'docx') {
-                // For Word, read as text (limited support)
-                const text = await file.text();
-                extractedContent = text;
+                // For Word, limited support in browser
+                extractedContent = `[Word: ${fileName}]\n\nĐây là file Word. Trình duyệt không thể đọc trực tiếp file Word. Vui lòng copy-paste nội dung hoặc mô tả tài liệu này.`;
                 
             } else if (fileType.startsWith('video/')) {
                 // For video, we'll just save the file reference
                 extractedContent = `[Video: ${fileName}]\n\nĐây là file video. Vui lòng mô tả nội dung video để các công cụ có thể xử lý.`;
-            } else {
-                // Generic text extraction
+            } else if (fileType.startsWith('text/')) {
+                // Plain text files
                 extractedContent = await file.text();
+            } else {
+                extractedContent = `[File: ${fileName}]\n\nKhông thể trích xuất nội dung tự động. Vui lòng mô tả nội dung file này.`;
             }
             
             // Add to learning files
@@ -592,14 +604,15 @@ async function handleLearningFileUpload(event) {
         // Clear file input
         event.target.value = '';
         
+        state.isLoadingPrompts = false;
         render();
         showToast(`Đã tải lên ${files.length} tệp`, 'success');
-        hideLoadingOverlay();
         
     } catch (error) {
         console.error('Error uploading files:', error);
-        showToast('Lỗi tải tệp lên', 'error');
-        hideLoadingOverlay();
+        state.isLoadingPrompts = false;
+        render();
+        showToast('Lỗi tải tệp lên: ' + error.message, 'error');
     }
 }
 
@@ -619,7 +632,8 @@ async function processLearningAction(action) {
     }
     
     try {
-        showLoadingOverlay(`Đang ${action === 'summary' ? 'tóm tắt' : action === 'flashcards' ? 'tạo flashcard' : action === 'quiz' ? 'tạo câu hỏi' : 'giải thích'}...`);
+        state.isLoadingPrompts = true;
+        render();
         
         let prompt = '';
         let resultTitle = '';
@@ -662,14 +676,15 @@ async function processLearningAction(action) {
             timestamp: Date.now()
         });
         
+        state.isLoadingPrompts = false;
         render();
         showToast('Xử lý thành công!', 'success');
-        hideLoadingOverlay();
         
     } catch (error) {
         console.error('Error processing learning action:', error);
-        showToast('Lỗi xử lý', 'error');
-        hideLoadingOverlay();
+        state.isLoadingPrompts = false;
+        render();
+        showToast('Lỗi xử lý: ' + error.message, 'error');
     }
 }
 
@@ -3058,7 +3073,14 @@ function renderLearningMainContent() {
             
             <!-- Results Area -->
             <div class="flex-1 overflow-y-auto">
-                ${state.learningContext ? `
+                ${state.isLoadingPrompts ? `
+                    <div class="flex items-center justify-center py-12">
+                        <div class="text-center">
+                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+                            <p class="${styles.textPrimary} font-bold">Đang xử lý...</p>
+                        </div>
+                    </div>
+                ` : state.learningContext ? `
                     <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6 mb-4">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="font-bold ${styles.textPrimary} flex items-center gap-2">
