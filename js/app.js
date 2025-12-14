@@ -2232,8 +2232,6 @@ async function getFirebaseIdToken() {
 
 // API Call Logic (Updated with better Error Handling & User Key)
 async function runPrompt() {
-        ProgressBar.start();
-        const data = await response.json();
     const promptText = document.getElementById('preview-prompt').value;
     const temperature = parseFloat(document.getElementById('temp-slider').value);
     
