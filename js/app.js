@@ -1276,6 +1276,64 @@ window.toggleAuthMode = function() {
     lucide.createIcons();
 };
 
+// Email Link Modal
+window.openEmailLinkModal = function() {
+    const styles = getStyles();
+    const container = document.getElementById('modal-body');
+    
+    container.innerHTML = `
+        <div class="p-6 border-b ${styles.border} bg-gradient-to-r from-blue-900/10 to-cyan-900/10">
+            <h2 class="text-2xl font-bold ${styles.textPrimary} flex items-center gap-3">
+                <i data-lucide="mail" class="text-blue-500"></i> Đăng nhập bằng Email Link
+            </h2>
+            <p class="text-sm ${styles.textSecondary} mt-2">Nhận một liên kết đăng nhập an toàn trong email của bạn</p>
+        </div>
+        <div class="flex-1 overflow-auto p-8 flex flex-col justify-center">
+            <form onsubmit="handleEmailLinkSignIn(event)" class="max-w-md mx-auto w-full space-y-5">
+                <div>
+                    <label class="${styles.textPrimary} text-sm font-medium mb-2 block">Email của bạn</label>
+                    <input type="email" name="email" placeholder="yourname@example.com" required class="w-full px-4 py-3 rounded-lg border ${styles.border} ${styles.inputBg} ${styles.textPrimary} placeholder:${styles.textSecondary} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                </div>
+                
+                <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                    <p class="text-sm ${styles.textSecondary}">
+                        <i data-lucide="info" size="16" class="inline mr-2 text-blue-500"></i>
+                        Chúng tôi sẽ gửi một liên kết bảo mật tới email của bạn. Nhấp vào liên kết để đăng nhập mà không cần mật khẩu.
+                    </p>
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg py-3 transition-colors flex items-center justify-center gap-2">
+                    <i data-lucide="send" size="18"></i>
+                    Gửi Email Link Đăng nhập
+                </button>
+
+                <button type="button" onclick="closeModal()" class="w-full text-center py-3 ${styles.textSecondary} hover:${styles.textPrimary} font-medium transition">
+                    Quay lại
+                </button>
+            </form>
+        </div>
+    `;
+    
+    lucide.createIcons();
+    openModal('email-link');
+};
+
+async function handleEmailLinkSignIn(e) {
+    e.preventDefault();
+    const email = document.querySelector('input[name="email"]').value.trim();
+    
+    if (!email) {
+        showToast('Vui lòng nhập email', 'warning');
+        return;
+    }
+    
+    const result = await sendEmailLinkSignIn(email);
+    if (result.success) {
+        // Đóng modal sau 2 giây
+        setTimeout(() => closeModal(), 2000);
+    }
+}
+
 // --- Favorites ---
 async function toggleFavorite(e, promptId) {
     e.stopPropagation();
@@ -3865,6 +3923,14 @@ function renderLoginModal(container) {
                             </svg>
                             Đăng nhập với Google
                         </button>
+
+                        <button type="button" onclick="openEmailLinkModal()" class="w-full border ${styles.border} ${styles.textPrimary} hover:${styles.glass} text-white font-semibold rounded-lg py-3 shadow-sm transition-colors flex items-center justify-center gap-2 bg-white hover:bg-gray-50">
+                            <svg class="w-5 h-5 ${styles.textPrimary}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="4" width="20" height="16" rx="2"/>
+                                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                            </svg>
+                            Đăng nhập bằng Email Link
+                        </button>
                     </form>
 
                     <div class="text-center text-sm ${styles.textSecondary}">
@@ -5395,6 +5461,37 @@ Nội dung: ${input}`;
 window.onload = () => {
     applyTheme();
     setupShortcuts();
+    
+    // Kiểm tra xem có email link sign-in pending không
+    const checkEmailLinkSignIn = async () => {
+        try {
+            // Kiểm tra xem URL hiện tại có chứa email link không
+            if (window.firebaseIsSignInWithEmailLink && window.firebaseIsSignInWithEmailLink(window.firebaseAuth, window.location.href)) {
+                console.log('📧 Phát hiện email link sign-in...');
+                
+                // Lấy email từ localStorage (nếu có)
+                let email = localStorage.getItem('emailForSignIn');
+                
+                if (!email) {
+                    // Nếu không có email trong localStorage, yêu cầu người dùng nhập
+                    email = window.prompt('Vui lòng nhập email để hoàn thành đăng nhập:');
+                    if (!email) return;
+                }
+                
+                // Hoàn thành sign-in
+                const result = await completeEmailLinkSignIn(email);
+                if (result.success) {
+                    // Xóa code khỏi URL (optional)
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            }
+        } catch (error) {
+            console.error('❌ Lỗi kiểm tra email link:', error);
+        }
+    };
+    
+    // Chạy kiểm tra email link
+    checkEmailLinkSignIn();
     
     // Khởi tạo Firebase Authentication State Listener
     watchAuthState((user) => {

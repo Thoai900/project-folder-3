@@ -19,7 +19,7 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getDatabase, ref, set, get, push, onValue, update, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, signInAnonymously, signInWithPhoneNumber, RecaptchaVerifier, sendSignInLinkToEmail, connectAuthEmulator, signInWithPopup, GoogleAuthProvider, sendEmailVerification } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, signInAnonymously, signInWithPhoneNumber, RecaptchaVerifier, sendSignInLinkToEmail, signInWithEmailLink, isSignInWithEmailLink, connectAuthEmulator, signInWithPopup, GoogleAuthProvider, sendEmailVerification } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         
         const firebaseConfig = {
@@ -68,6 +68,8 @@
         window.firebaseSignInWithPhoneNumber = signInWithPhoneNumber;
         window.firebaseRecaptchaVerifier = RecaptchaVerifier;
         window.firebaseSendSignInLinkToEmail = sendSignInLinkToEmail;
+        window.firebaseSignInWithEmailLink = signInWithEmailLink;
+        window.firebaseIsSignInWithEmailLink = isSignInWithEmailLink;
         window.firebaseConnectAuthEmulator = connectAuthEmulator;
         window.firebaseSignInWithPopup = signInWithPopup;
         window.firebaseSendEmailVerification = sendEmailVerification;

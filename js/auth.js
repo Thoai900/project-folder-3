@@ -995,4 +995,138 @@ async function verifyPhoneOTP(otp, phoneNumber, name, userType = 'student') {
         return { success: false, error: error.message };
     }
 }
+
+/**
+ * Gửi email link đăng nhập (Passwordless Sign-in)
+ * @param {string} email - Email người dùng
+ * @returns {Promise}
+ */
+async function sendEmailLinkSignIn(email) {
+    try {
+        if (!email) {
+            showToast('Vui lòng nhập email để nhận link đăng nhập', 'warning');
+            return { success: false, error: 'Email required' };
+        }
+
+        // Cấu hình ActionCodeSettings
+        const actionCodeSettings = {
+            // URL để redirect sau khi click link
+            url: window.location.origin,
+            // Phải set là true để hoàn thành sign-in trong app
+            handleCodeInApp: true
+        };
+
+        console.log('📧 Đang gửi email link đăng nhập cho:', email);
+        
+        // Gửi email link
+        await window.firebaseSendSignInLinkToEmail(window.firebaseAuth, email, actionCodeSettings);
+        
+        // Lưu email vào localStorage để xác minh sau
+        localStorage.setItem('emailForSignIn', email);
+        
+        console.log('✅ Email link đã gửi thành công');
+        showToast(`✅ Email đăng nhập đã gửi tới ${email}. Vui lòng kiểm tra email của bạn!`, 'success');
+        
+        return { success: true, email };
+    } catch (error) {
+        console.error('❌ Lỗi gửi email link:', error.message);
+        
+        let errorMsg = 'Không thể gửi email đăng nhập.';
+        if (error.code === 'auth/invalid-email') {
+            errorMsg = 'Email không hợp lệ.';
+        } else if (error.code === 'auth/too-many-requests') {
+            errorMsg = 'Quá nhiều yêu cầu. Vui lòng thử lại sau.';
+        }
+        
+        showToast(`❌ ${errorMsg}`);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Hoàn thành đăng nhập với email link
+ * @param {string} email - Email người dùng (bắt buộc để xác minh)
+ * @returns {Promise}
+ */
+async function completeEmailLinkSignIn(email) {
+    try {
+        if (!email) {
+            showToast('Email không được tìm thấy. Vui lòng thử lại.', 'warning');
+            return { success: false, error: 'Email required' };
+        }
+
+        const emailLink = window.location.href;
+        
+        // Kiểm tra xem link có phải là sign-in link không
+        if (!window.firebaseIsSignInWithEmailLink(window.firebaseAuth, emailLink)) {
+            console.warn('⚠️ URL không phải là valid sign-in email link');
+            return { success: false, error: 'Invalid sign-in link' };
+        }
+
+        console.log('🔐 Đang hoàn thành đăng nhập với email link...');
+        
+        // Hoàn thành sign-in
+        const result = await window.firebaseSignInWithEmailLink(window.firebaseAuth, email, emailLink);
+        const user = result.user;
+        const userId = user.uid;
+
+        console.log('✅ Đăng nhập bằng email link thành công:', userId);
+        
+        // Kiểm tra user đã tồn tại trong DB chưa
+        const userRef = window.firebaseRef(window.firebaseDB, `users/${userId}`);
+        const snapshot = await window.firebaseGet(userRef);
+
+        if (!snapshot.exists()) {
+            // Tạo user profile nếu chưa tồn tại
+            console.log('📝 Tạo user profile mới');
+            await window.firebaseSet(userRef, {
+                id: userId,
+                email: user.email || '',
+                name: user.email.split('@')[0] || 'User',
+                userType: 'student',
+                avatar: null,
+                phone: null,
+                isAnonymous: false,
+                createdAt: new Date().toISOString(),
+                lastLogin: new Date().toISOString(),
+                favorites: [],
+                friends: [],
+                customPrompts: [],
+                sharedPrompts: [],
+                settings: {
+                    theme: 'dark',
+                    language: 'vi'
+                }
+            });
+        } else {
+            // Cập nhật lastLogin
+            await window.firebaseUpdate(userRef, {
+                lastLogin: new Date().toISOString()
+            });
+        }
+
+        // Xóa email khỏi localStorage
+        localStorage.removeItem('emailForSignIn');
+        
+        showToast(`✅ Đăng nhập thành công!`);
+        
+        return { success: true, userId };
+    } catch (error) {
+        console.error('❌ Lỗi hoàn thành email link sign-in:', error.message);
+        
+        let errorMsg = 'Không thể đăng nhập.';
+        if (error.code === 'auth/invalid-email') {
+            errorMsg = 'Email không hợp lệ.';
+        } else if (error.code === 'auth/invalid-oob-code') {
+            errorMsg = 'Link đăng nhập không hợp lệ hoặc đã hết hạn.';
+        } else if (error.code === 'auth/user-disabled') {
+            errorMsg = 'Tài khoản này đã bị vô hiệu hóa.';
+        }
+        
+        showToast(`❌ ${errorMsg}`);
+        console.error('Full error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
 console.log('✅ auth.js loaded successfully');
