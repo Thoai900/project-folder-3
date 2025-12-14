@@ -596,8 +596,16 @@ async function handleLearningFileUpload(event) {
     
     if (files.length === 0) return;
     
+    // Check API key availability
+    const useUserKey = state.userApiKey ? true : false;
+    if (!useUserKey && !window.firebaseAuth?.currentUser) {
+        showToast('Vui lòng đăng nhập hoặc thêm API key để sử dụng tính năng này', 'warning');
+        return;
+    }
+    
     try {
         state.isLoadingPrompts = true;
+        ProgressBar.start();
         renderApp();
         
         for (const file of files) {
@@ -615,14 +623,19 @@ async function handleLearningFileUpload(event) {
                 const headers = { 'Content-Type': 'application/json' };
                 if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
 
+                const body = {
+                    imageBase64: base64,
+                    mimeType: fileType,
+                    action: 'scan'
+                };
+                if (state.userApiKey) {
+                    body.userApiKey = state.userApiKey;
+                }
+
                 const result = await fetch('/api/image-scan', {
                     method: 'POST',
                     headers,
-                    body: JSON.stringify({ 
-                        imageBase64: base64,
-                        mimeType: fileType,
-                        action: 'scan'
-                    })
+                    body: JSON.stringify(body)
                 });
 
                 if (!result.ok) {
@@ -631,7 +644,7 @@ async function handleLearningFileUpload(event) {
                 }
 
                 const data = await result.json();
-                extractedContent = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Không thể trích xuất nội dung từ ảnh';
+                extractedContent = data?.result || data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Không thể trích xuất nội dung từ ảnh';
                 
             } else if (fileType === 'application/pdf' || fileExt === 'pdf') {
                 // For PDF, read as text (basic extraction - limited)
@@ -666,15 +679,22 @@ async function handleLearningFileUpload(event) {
         // Clear file input
         event.target.value = '';
         
+        // Add gamification points
+        if (state.currentUser) {
+            addPoints(files.length * 10, 'Document upload');
+        }
+        
+        ProgressBar.done();
         state.isLoadingPrompts = false;
         renderApp();
-        showToast(`Đã tải lên ${files.length} tệp`, 'success');
+        showToast(`Đã tải ${files.length} tài liệu thành công!`, 'success');
         
     } catch (error) {
+        ProgressBar.done();
         console.error('Error uploading files:', error);
         state.isLoadingPrompts = false;
         renderApp();
-        showEmptyToast('Lỗi tải tệp', error.message);
+        showToast('Lỗi tải tệp: ' + error.message);
     }
 }
 
