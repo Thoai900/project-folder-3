@@ -131,11 +131,22 @@ async function firebaseLogin(email, password) {
 // Gửi lại email xác minh dựa trên thông tin form (email + mật khẩu)
 async function resendVerificationEmailFromForm() {
     try {
+        const btn = document.querySelector('button[onclick="resendVerificationEmailFromForm()"]');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader-2" size="12" class="inline animate-spin mr-1"></i> Đang gửi...';
+            if (window.lucide?.createIcons) lucide.createIcons();
+        }
+
         const email = document.querySelector('#auth-form input[name="email"]')?.value?.trim();
         const password = document.querySelector('#auth-form input[name="password"]')?.value;
 
         if (!email || !password) {
             showToast('Nhập email và mật khẩu để gửi lại xác minh', 'warning');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = 'Gửi lại email xác minh';
+            }
             return;
         }
 
@@ -148,13 +159,22 @@ async function resendVerificationEmailFromForm() {
             if (window.firebaseSendEmailVerification) {
                 await window.firebaseSendEmailVerification(user);
             }
-            showToast('Đã gửi lại email xác minh. Kiểm tra hộp thư.', 'success');
+            showToast('✓ Đã gửi lại email xác minh. Kiểm tra hộp thư.', 'success');
         }
 
         await window.firebaseSignOut(window.firebaseAuth);
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = 'Gửi lại email xác minh';
+        }
     } catch (error) {
         console.error('❌ Lỗi gửi lại email xác minh:', error);
         showToast('Không thể gửi lại email xác minh. Kiểm tra thông tin đăng nhập.', 'error');
+        const btn = document.querySelector('button[onclick="resendVerificationEmailFromForm()"]');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = 'Gửi lại email xác minh';
+        }
     }
 }
 
