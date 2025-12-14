@@ -1,6 +1,14 @@
 // Vercel Serverless Function for Prompt Refinement
 // Refines user prompts to be more clear and effective using Gemini AI
 
+// Helper to strip code fences and trim
+function sanitizeText(text = '') {
+    return text
+        .replace(/```[a-zA-Z]*\s*/g, '')
+        .replace(/```/g, '')
+        .trim();
+}
+
 module.exports = async function handler(req, res) {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -94,7 +102,7 @@ Quy tắc:
                 });
             }
 
-            const refinedPrompt = data.candidates?.[0]?.content?.parts?.[0]?.text || prompt;
+            const refinedPrompt = sanitizeText(data.candidates?.[0]?.content?.parts?.[0]?.text || prompt);
 
             return res.status(200).json({ 
                 original: prompt,
@@ -131,7 +139,7 @@ Quy tắc:
             });
         }
 
-        const refinedText = oaData.choices?.[0]?.message?.content || prompt;
+        const refinedText = sanitizeText(oaData.choices?.[0]?.message?.content || prompt);
 
         return res.status(200).json({
             original: prompt,

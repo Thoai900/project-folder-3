@@ -1,6 +1,14 @@
 // Vercel Serverless Function for Smart Prompt Generation
 // Generates prompt templates from user ideas using Gemini AI
 
+// Helper: strip code fences and trim whitespace/special wrappers
+function sanitizeText(text = '') {
+    return text
+        .replace(/```[a-zA-Z]*\s*/g, '') // remove ```json or ``` language fences
+        .replace(/```/g, '')
+        .trim();
+}
+
 module.exports = async function handler(req, res) {
     // Only allow POST requests
     if (req.method !== 'POST') {
@@ -81,7 +89,19 @@ module.exports = async function handler(req, res) {
                 });
             }
 
-            return res.status(200).json({ ...data, provider: 'gemini' });
+            const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const cleaned = sanitizeText(rawText);
+
+            return res.status(200).json({
+                provider: 'gemini',
+                candidates: [
+                    {
+                        content: {
+                            parts: [ { text: cleaned } ]
+                        }
+                    }
+                ]
+            });
         }
 
         // Fallback: OpenAI (chat.completions) with JSON output
@@ -111,7 +131,8 @@ module.exports = async function handler(req, res) {
             });
         }
 
-        const text = oaData.choices?.[0]?.message?.content || '';
+        const rawText = oaData.choices?.[0]?.message?.content || '';
+        const cleaned = sanitizeText(rawText);
 
         // Wrap OpenAI response into Gemini-like shape for frontend compatibility
         return res.status(200).json({
@@ -120,9 +141,7 @@ module.exports = async function handler(req, res) {
             candidates: [
                 {
                     content: {
-                        parts: [
-                            { text }
-                        ]
+                        parts: [ { text: cleaned } ]
                     }
                 }
             ]
