@@ -1617,9 +1617,9 @@ async function handleImageScan() {
         });
 
         const respData = await response.json();
-        if(data.error) throw new Error(data.error.message || data.error);
+        if(respData.error) throw new Error(respData.error.message || respData.error);
         
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Không tìm thấy văn bản nào.";
+        const text = respData.candidates?.[0]?.content?.parts?.[0]?.text || "Không tìm thấy văn bản nào.";
         resultArea.value = text;
         state.scanResult = text;
         showToast("✓ Trích xuất thành công!");
@@ -1669,9 +1669,9 @@ async function refineScannedText() {
         });
 
         const refineData = await response.json();
-        if(data.error) throw new Error(data.error.message || data.error);
+        if(refineData.error) throw new Error(refineData.error.message || refineData.error);
 
-        const refinedText = data.candidates?.[0]?.content?.parts?.[0]?.text || currentText;
+        const refinedText = refineData.candidates?.[0]?.content?.parts?.[0]?.text || currentText;
         resultArea.value = refinedText;
         state.scanResult = refinedText;
         showToast("Đã tinh chỉnh thành công!");
@@ -1705,7 +1705,7 @@ async function analyzeScannedText(currentText) {
             body: JSON.stringify({ action: 'analyze', currentText })
         });
         const scanData = await response.json();
-        const analysis = data.analysis || {};
+        const analysis = scanData.analysis || {};
 
         const container = document.getElementById('scan-result').parentElement;
         let ui = document.getElementById('scan-analysis-ui');
