@@ -248,7 +248,10 @@ let state = {
     firebaseSynced: false,
     // Learning space
     learningTab: 'prompts',
-    learningSearch: ''
+    learningSearch: '',
+    learningContext: '', // Nội dung từ prompt hoặc file
+    learningFiles: [], // Danh sách files đã upload
+    learningResults: [] // Kết quả từ các công cụ
 };
 
 // ==========================================
@@ -483,6 +486,266 @@ async function callGeminiAPI(prompt) {
     const data = await response.json();
     if (data.error) throw new Error(data.error.message || data.error);
     return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+// ==========================================
+// LEARNING SPACE FUNCTIONS
+// ==========================================
+
+async function submitLearningPrompt() {
+    const textarea = document.getElementById('learning-prompt-input');
+    const content = textarea?.value?.trim();
+    
+    if (!content) {
+        showToast('Vui lòng nhập nội dung', 'warning');
+        return;
+    }
+    
+    try {
+        showLoadingOverlay('Đang xử lý nội dung...');
+        
+        // Send to Gemini to process and expand the content
+        const enhancedContent = await callGeminiAPI(`
+Bạn là một trợ lý giáo dục thông minh. Người dùng đã cung cấp nội dung sau để học:
+
+${content}
+
+Hãy phân tích và trình bày lại nội dung này một cách có cấu trúc, dễ hiểu, chi tiết hơn. Nếu đó là câu hỏi, hãy trả lời đầy đủ. Nếu là chủ đề, hãy giải thích toàn diện.
+        `);
+        
+        // Save to context
+        state.learningContext = enhancedContent;
+        textarea.value = '';
+        
+        render();
+        showToast('Nội dung đã được xử lý thành công!', 'success');
+        hideLoadingOverlay();
+    } catch (error) {
+        console.error('Error processing prompt:', error);
+        showToast('Lỗi xử lý nội dung', 'error');
+        hideLoadingOverlay();
+    }
+}
+
+async function handleLearningFileUpload(event) {
+    const files = Array.from(event.target.files);
+    
+    if (files.length === 0) return;
+    
+    try {
+        showLoadingOverlay('Đang xử lý tệp...');
+        
+        for (const file of files) {
+            const fileType = file.type;
+            const fileName = file.name;
+            const fileExt = fileName.split('.').pop().toLowerCase();
+            
+            let extractedContent = '';
+            
+            // Process based on file type
+            if (fileType.startsWith('image/')) {
+                // For images, use image-scan API
+                const base64 = await fileToBase64(file);
+                const result = await fetch('/api/image-scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        image: base64,
+                        prompt: 'Phân tích hình ảnh này và trích xuất toàn bộ văn bản, nội dung học thuật. Nếu là sơ đồ, công thức, hãy mô tả chi tiết.'
+                    })
+                });
+                const data = await result.json();
+                extractedContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                
+            } else if (fileType === 'application/pdf' || fileExt === 'pdf') {
+                // For PDF, read as text (basic extraction)
+                const text = await file.text();
+                extractedContent = text;
+                
+            } else if (fileType.includes('word') || fileExt === 'doc' || fileExt === 'docx') {
+                // For Word, read as text (limited support)
+                const text = await file.text();
+                extractedContent = text;
+                
+            } else if (fileType.startsWith('video/')) {
+                // For video, we'll just save the file reference
+                extractedContent = `[Video: ${fileName}]\n\nĐây là file video. Vui lòng mô tả nội dung video để các công cụ có thể xử lý.`;
+            } else {
+                // Generic text extraction
+                extractedContent = await file.text();
+            }
+            
+            // Add to learning files
+            state.learningFiles.push({
+                name: fileName,
+                type: fileType,
+                size: file.size,
+                content: extractedContent
+            });
+            
+            // Append to context
+            state.learningContext = (state.learningContext || '') + `\n\n### Tài liệu: ${fileName}\n\n${extractedContent}`;
+        }
+        
+        // Clear file input
+        event.target.value = '';
+        
+        render();
+        showToast(`Đã tải lên ${files.length} tệp`, 'success');
+        hideLoadingOverlay();
+        
+    } catch (error) {
+        console.error('Error uploading files:', error);
+        showToast('Lỗi tải tệp lên', 'error');
+        hideLoadingOverlay();
+    }
+}
+
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+async function processLearningAction(action) {
+    if (!state.learningContext) {
+        showToast('Không có nội dung để xử lý', 'warning');
+        return;
+    }
+    
+    try {
+        showLoadingOverlay(`Đang ${action === 'summary' ? 'tóm tắt' : action === 'flashcards' ? 'tạo flashcard' : action === 'quiz' ? 'tạo câu hỏi' : 'giải thích'}...`);
+        
+        let prompt = '';
+        let resultTitle = '';
+        let resultIcon = '';
+        let resultColor = '';
+        
+        if (action === 'summary') {
+            prompt = `Hãy tóm tắt nội dung sau đây một cách ngắn gọn, súc tích, nêu được các ý chính:\n\n${state.learningContext}`;
+            resultTitle = '📝 Tóm tắt nội dung';
+            resultIcon = '<i data-lucide="file-text" size="18" class="text-blue-500"></i>';
+            resultColor = 'blue';
+            
+        } else if (action === 'flashcards') {
+            prompt = `Dựa trên nội dung sau, tạo các flashcard để ôn tập (định dạng: Câu hỏi | Câu trả lời). Tạo ít nhất 5 flashcard:\n\n${state.learningContext}`;
+            resultTitle = '🎴 Flashcards ôn tập';
+            resultIcon = '<i data-lucide="layers" size="18" class="text-green-500"></i>';
+            resultColor = 'green';
+            
+        } else if (action === 'quiz') {
+            prompt = `Tạo bộ câu hỏi trắc nghiệm từ nội dung sau (4 lựa chọn, đánh dấu đáp án đúng). Tạo ít nhất 5 câu:\n\n${state.learningContext}`;
+            resultTitle = '❓ Câu hỏi kiểm tra';
+            resultIcon = '<i data-lucide="help-circle" size="18" class="text-purple-500"></i>';
+            resultColor = 'purple';
+            
+        } else if (action === 'explain') {
+            prompt = `Giải thích nội dung sau một cách dễ hiểu nhất, như thể bạn đang dạy một học sinh:\n\n${state.learningContext}`;
+            resultTitle = '💡 Giải thích chi tiết';
+            resultIcon = '<i data-lucide="lightbulb" size="18" class="text-orange-500"></i>';
+            resultColor = 'orange';
+        }
+        
+        const result = await callGeminiAPI(prompt);
+        
+        // Add to results
+        state.learningResults.push({
+            title: resultTitle,
+            content: result,
+            icon: resultIcon,
+            color: resultColor,
+            timestamp: Date.now()
+        });
+        
+        render();
+        showToast('Xử lý thành công!', 'success');
+        hideLoadingOverlay();
+        
+    } catch (error) {
+        console.error('Error processing learning action:', error);
+        showToast('Lỗi xử lý', 'error');
+        hideLoadingOverlay();
+    }
+}
+
+function removeLearningFile(index) {
+    state.learningFiles.splice(index, 1);
+    
+    // Rebuild context from remaining files
+    state.learningContext = state.learningFiles
+        .map(f => `### Tài liệu: ${f.name}\n\n${f.content}`)
+        .join('\n\n');
+    
+    render();
+    showToast('Đã xóa tệp', 'info');
+}
+
+function removeLearningResult(index) {
+    state.learningResults.splice(index, 1);
+    render();
+    showToast('Đã xóa kết quả', 'info');
+}
+
+function clearLearningContext() {
+    if (!confirm('Xóa toàn bộ nội dung và kết quả?')) return;
+    
+    state.learningContext = '';
+    state.learningFiles = [];
+    state.learningResults = [];
+    
+    const textarea = document.getElementById('learning-prompt-input');
+    if (textarea) textarea.value = '';
+    
+    render();
+    showToast('Đã xóa toàn bộ', 'info');
+}
+
+function loadPromptTemplate() {
+    // Open modal to choose from library prompts
+    showModal('Chọn prompt mẫu', (container) => {
+        const styles = getStyles();
+        const libraryPrompts = state.currentUser?.libraryPrompts || [];
+        
+        container.innerHTML = `
+            <div class="p-6 space-y-4">
+                <p class="${styles.textSecondary} text-sm">Chọn một prompt từ thư viện để sử dụng trong không gian học tập:</p>
+                
+                <div class="max-h-[400px] overflow-y-auto space-y-2 custom-scrollbar">
+                    ${libraryPrompts.length === 0 ? `
+                        <div class="text-center py-8 ${styles.textSecondary}">
+                            <p>Chưa có prompt trong thư viện</p>
+                        </div>
+                    ` : libraryPrompts.map((prompt, idx) => `
+                        <button onclick="selectPromptTemplate(${idx})" class="w-full text-left p-4 rounded-lg ${styles.inputBg} border ${styles.border} hover:border-indigo-500/50 transition-all">
+                            <p class="font-bold ${styles.textPrimary} mb-1">${prompt.title}</p>
+                            <p class="text-xs ${styles.textSecondary} line-clamp-2">${prompt.content}</p>
+                        </button>
+                    `).join('')}
+                </div>
+                
+                <button onclick="closeModal()" class="w-full py-3 rounded-lg ${styles.iconBg} border ${styles.border} ${styles.textPrimary} font-bold">
+                    Đóng
+                </button>
+            </div>
+        `;
+        lucide.createIcons();
+    });
+}
+
+function selectPromptTemplate(index) {
+    const prompt = state.currentUser?.libraryPrompts?.[index];
+    if (!prompt) return;
+    
+    const textarea = document.getElementById('learning-prompt-input');
+    if (textarea) {
+        textarea.value = prompt.content;
+    }
+    
+    closeModal();
+    showToast('Đã chọn prompt', 'success');
 }
 
 
@@ -2626,87 +2889,206 @@ function renderShowcase() {
 // ==========================================
 function renderLearningSpace() {
     const styles = getStyles();
+    const hasContext = state.learningContext && state.learningContext.length > 0;
     
     return `
         <div class="flex h-screen pt-16 pb-20 md:pb-0">
-            <!-- Main Content Area -->
+            <!-- Left Side - Content & Results -->
             <div class="flex-1 overflow-y-auto ${styles.bg}">
-                <div class="max-w-4xl mx-auto px-6 py-8">
-                    ${renderLearningContent()}
+                <div class="h-full px-6 py-8">
+                    ${renderLearningMainContent()}
                 </div>
             </div>
             
-            <!-- Right Sidebar - Tools -->
-            <div class="hidden md:flex w-20 ${styles.cardBg} border-l ${styles.border} flex-col items-center py-6 gap-6">
-                <div class="flex flex-col gap-4">
-                    <button 
-                        onclick="setLearningTab('prompts')" 
-                        class="relative group"
-                        title="Prompt mẫu"
-                    >
-                        <div class="w-12 h-12 rounded-xl ${state.learningTab === 'prompts' ? 'bg-indigo-500 text-white' : styles.iconBg + ' ' + styles.textSecondary} flex items-center justify-center hover:scale-110 transition-all cursor-pointer">
-                            <i data-lucide="book-open" size="20"></i>
+            <!-- Right Side - Tools Panel -->
+            <div class="w-96 ${styles.cardBg} border-l ${styles.border} overflow-y-auto">
+                <div class="p-6 space-y-6">
+                    <!-- Upload Section -->
+                    <div>
+                        <h3 class="text-lg font-bold ${styles.textPrimary} mb-4 flex items-center gap-2">
+                            <i data-lucide="upload-cloud" size="20" class="text-indigo-500"></i>
+                            Tải tài liệu lên
+                        </h3>
+                        <div class="${styles.iconBg} border-2 border-dashed ${styles.border} rounded-xl p-4 text-center hover:border-indigo-500/50 transition-all cursor-pointer" onclick="document.getElementById('learning-file-input').click()">
+                            <i data-lucide="file-plus" size="32" class="${styles.textSecondary} mx-auto mb-2"></i>
+                            <p class="text-sm ${styles.textPrimary} font-medium mb-1">Click để tải file</p>
+                            <p class="text-xs ${styles.textSecondary}">PDF, Word, Ảnh, Video</p>
                         </div>
-                        ${state.learningTab === 'prompts' ? '<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-indigo-500 rounded-r"></div>' : ''}
+                        <input type="file" id="learning-file-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.mp4,.mov" class="hidden" onchange="handleLearningFileUpload(event)" multiple>
+                        
+                        ${state.learningFiles && state.learningFiles.length > 0 ? `
+                            <div class="mt-4 space-y-2">
+                                ${state.learningFiles.map((file, idx) => `
+                                    <div class="${styles.inputBg} rounded-lg p-3 flex items-center gap-3">
+                                        <i data-lucide="file" size="16" class="${styles.textSecondary}"></i>
+                                        <span class="flex-1 text-sm ${styles.textPrimary} truncate">${file.name}</span>
+                                        <button onclick="removeLearningFile(${idx})" class="text-red-500 hover:bg-red-500/10 p-1 rounded">
+                                            <i data-lucide="x" size="16"></i>
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <!-- Context Status -->
+                    ${hasContext ? `
+                        <div class="bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i data-lucide="check-circle" size="18" class="text-indigo-500"></i>
+                                <p class="font-bold text-indigo-500 text-sm">Đã có nội dung</p>
+                            </div>
+                            <p class="text-xs ${styles.textSecondary}">Các công cụ bên dưới sẽ sử dụng nội dung này</p>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Quick Actions -->
+                    <div>
+                        <h3 class="text-lg font-bold ${styles.textPrimary} mb-4 flex items-center gap-2">
+                            <i data-lucide="zap" size="20" class="text-yellow-500"></i>
+                            Công cụ học tập
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            <button onclick="processLearningAction('summary')" class="w-full ${styles.cardBg} border ${styles.border} rounded-xl p-4 hover:border-blue-500/50 hover:shadow-lg transition-all text-left group ${!hasContext ? 'opacity-50 cursor-not-allowed' : ''}" ${!hasContext ? 'disabled' : ''}>
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <i data-lucide="file-text" size="20" class="text-blue-500"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="font-bold ${styles.textPrimary}">Tóm tắt</p>
+                                    </div>
+                                </div>
+                                <p class="text-xs ${styles.textSecondary}">Trích xuất ý chính từ nội dung</p>
+                            </button>
+                            
+                            <button onclick="processLearningAction('flashcards')" class="w-full ${styles.cardBg} border ${styles.border} rounded-xl p-4 hover:border-purple-500/50 hover:shadow-lg transition-all text-left group ${!hasContext ? 'opacity-50 cursor-not-allowed' : ''}" ${!hasContext ? 'disabled' : ''}>
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <i data-lucide="credit-card" size="20" class="text-purple-500"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="font-bold ${styles.textPrimary}">Flashcards</p>
+                                    </div>
+                                </div>
+                                <p class="text-xs ${styles.textSecondary}">Tạo thẻ ghi nhớ hai mặt</p>
+                            </button>
+                            
+                            <button onclick="processLearningAction('quiz')" class="w-full ${styles.cardBg} border ${styles.border} rounded-xl p-4 hover:border-green-500/50 hover:shadow-lg transition-all text-left group ${!hasContext ? 'opacity-50 cursor-not-allowed' : ''}" ${!hasContext ? 'disabled' : ''}>
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <i data-lucide="help-circle" size="20" class="text-green-500"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="font-bold ${styles.textPrimary}">Câu hỏi</p>
+                                    </div>
+                                </div>
+                                <p class="text-xs ${styles.textSecondary}">Tạo câu hỏi kiểm tra</p>
+                            </button>
+                            
+                            <button onclick="processLearningAction('explain')" class="w-full ${styles.cardBg} border ${styles.border} rounded-xl p-4 hover:border-orange-500/50 hover:shadow-lg transition-all text-left group ${!hasContext ? 'opacity-50 cursor-not-allowed' : ''}" ${!hasContext ? 'disabled' : ''}>
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div class="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <i data-lucide="lightbulb" size="20" class="text-orange-500"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="font-bold ${styles.textPrimary}">Giải thích</p>
+                                    </div>
+                                </div>
+                                <p class="text-xs ${styles.textSecondary}">Giải thích chi tiết khái niệm</p>
+                            </button>
+                            
+                            <button onclick="clearLearningContext()" class="w-full ${styles.inputBg} border ${styles.border} rounded-xl p-3 hover:border-red-500/50 transition-all text-center text-sm font-medium ${styles.textSecondary} hover:text-red-500">
+                                <i data-lucide="trash-2" size="16" class="inline mr-2"></i>
+                                Xóa tất cả nội dung
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderLearningMainContent() {
+    const styles = getStyles();
+    
+    return `
+        <div class="h-full flex flex-col">
+            <!-- Header -->
+            <div class="mb-6">
+                <h1 class="text-4xl font-black ${styles.textPrimary} mb-2">📚 Không gian học tập</h1>
+                <p class="${styles.textSecondary}">Sử dụng prompt hoặc tải tài liệu lên, sau đó áp dụng các công cụ bên phải</p>
+            </div>
+            
+            <!-- Prompt Input Area -->
+            <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6 mb-6">
+                <label class="block text-sm font-bold ${styles.textPrimary} mb-3">Nhập nội dung hoặc đặt câu hỏi</label>
+                <textarea 
+                    id="learning-prompt-input" 
+                    class="w-full h-40 ${styles.inputBg} border ${styles.border} rounded-xl p-4 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all resize-none"
+                    placeholder="Nhập bài học, kiến thức cần học, hoặc đặt câu hỏi...&#10;&#10;Ví dụ: Giải thích định lý Pythagore, Tóm tắt lịch sử Việt Nam thế kỷ 20..."
+                ></textarea>
+                <div class="flex gap-3 mt-4">
+                    <button onclick="submitLearningPrompt()" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="send" size="20"></i> Gửi và xử lý
                     </button>
-                    
-                    <button 
-                        onclick="setLearningTab('scan')" 
-                        class="relative group"
-                        title="Quét ảnh"
-                    >
-                        <div class="w-12 h-12 rounded-xl ${state.learningTab === 'scan' ? 'bg-orange-500 text-white' : styles.iconBg + ' ' + styles.textSecondary} flex items-center justify-center hover:scale-110 transition-all cursor-pointer">
-                            <i data-lucide="scan" size="20"></i>
-                        </div>
-                        ${state.learningTab === 'scan' ? '<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-orange-500 rounded-r"></div>' : ''}
-                    </button>
-                    
-                    <button 
-                        onclick="setLearningTab('summary')" 
-                        class="relative group"
-                        title="Tóm tắt"
-                    >
-                        <div class="w-12 h-12 rounded-xl ${state.learningTab === 'summary' ? 'bg-blue-500 text-white' : styles.iconBg + ' ' + styles.textSecondary} flex items-center justify-center hover:scale-110 transition-all cursor-pointer">
-                            <i data-lucide="file-text" size="20"></i>
-                        </div>
-                        ${state.learningTab === 'summary' ? '<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-500 rounded-r"></div>' : ''}
-                    </button>
-                    
-                    <button 
-                        onclick="setLearningTab('flashcards')" 
-                        class="relative group"
-                        title="Flashcards"
-                    >
-                        <div class="w-12 h-12 rounded-xl ${state.learningTab === 'flashcards' ? 'bg-purple-500 text-white' : styles.iconBg + ' ' + styles.textSecondary} flex items-center justify-center hover:scale-110 transition-all cursor-pointer">
-                            <i data-lucide="credit-card" size="20"></i>
-                        </div>
-                        ${state.learningTab === 'flashcards' ? '<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-purple-500 rounded-r"></div>' : ''}
-                    </button>
-                    
-                    <button 
-                        onclick="setLearningTab('quiz')" 
-                        class="relative group"
-                        title="Câu hỏi"
-                    >
-                        <div class="w-12 h-12 rounded-xl ${state.learningTab === 'quiz' ? 'bg-green-500 text-white' : styles.iconBg + ' ' + styles.textSecondary} flex items-center justify-center hover:scale-110 transition-all cursor-pointer">
-                            <i data-lucide="help-circle" size="20"></i>
-                        </div>
-                        ${state.learningTab === 'quiz' ? '<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-green-500 rounded-r"></div>' : ''}
-                    </button>
-                    
-                    <div class="w-12 h-px ${styles.border} my-2"></div>
-                    
-                    <button 
-                        onclick="setLearningTab('chat')" 
-                        class="relative group"
-                        title="Trò chuyện"
-                    >
-                        <div class="w-12 h-12 rounded-xl ${state.learningTab === 'chat' ? 'bg-teal-500 text-white' : styles.iconBg + ' ' + styles.textSecondary} flex items-center justify-center hover:scale-110 transition-all cursor-pointer">
-                            <i data-lucide="message-circle" size="20"></i>
-                        </div>
-                        ${state.learningTab === 'chat' ? '<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-teal-500 rounded-r"></div>' : ''}
+                    <button onclick="loadPromptTemplate()" class="px-6 py-3 rounded-xl ${styles.iconBg} border ${styles.border} hover:border-indigo-500/50 ${styles.textPrimary} font-bold transition-all flex items-center gap-2">
+                        <i data-lucide="book-open" size="20"></i> Chọn prompt mẫu
                     </button>
                 </div>
+            </div>
+            
+            <!-- Results Area -->
+            <div class="flex-1 overflow-y-auto">
+                ${state.learningContext ? `
+                    <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6 mb-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold ${styles.textPrimary} flex items-center gap-2">
+                                <i data-lucide="file-text" size="18" class="text-indigo-500"></i>
+                                Nội dung gốc
+                            </h3>
+                            <button onclick="copyToClipboard(\`${state.learningContext.replace(/`/g, '\\`')}\`)" class="text-xs px-3 py-1.5 rounded-lg ${styles.iconBg} hover:bg-indigo-500/10 ${styles.textSecondary} hover:text-indigo-500 transition-all">
+                                <i data-lucide="copy" size="14" class="inline mr-1"></i> Sao chép
+                            </button>
+                        </div>
+                        <div class="prose prose-sm max-w-none ${styles.textPrimary}">
+                            ${simpleMarkdown(state.learningContext)}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${state.learningResults.length > 0 ? state.learningResults.map((result, idx) => `
+                    <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6 mb-4 animate-fadeIn">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-bold ${styles.textPrimary} flex items-center gap-2">
+                                ${result.icon}
+                                ${result.title}
+                            </h3>
+                            <div class="flex gap-2">
+                                <button onclick="copyToClipboard(\`${result.content.replace(/`/g, '\\`')}\`)" class="text-xs px-3 py-1.5 rounded-lg ${styles.iconBg} hover:bg-${result.color}-500/10 ${styles.textSecondary} hover:text-${result.color}-500 transition-all">
+                                    <i data-lucide="copy" size="14" class="inline mr-1"></i> Sao chép
+                                </button>
+                                <button onclick="removeLearningResult(${idx})" class="text-xs px-3 py-1.5 rounded-lg ${styles.iconBg} hover:bg-red-500/10 ${styles.textSecondary} hover:text-red-500 transition-all">
+                                    <i data-lucide="x" size="14"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="prose prose-sm max-w-none ${styles.textPrimary}">
+                            ${simpleMarkdown(result.content)}
+                        </div>
+                    </div>
+                `).join('') : ''}
+                
+                ${!state.learningContext && state.learningResults.length === 0 ? `
+                    <div class="flex items-center justify-center h-full">
+                        <div class="text-center py-12">
+                            <i data-lucide="lightbulb" size="64" class="${styles.textSecondary} mx-auto mb-4 opacity-20"></i>
+                            <h3 class="text-xl font-bold ${styles.textPrimary} mb-2">Bắt đầu học tập</h3>
+                            <p class="${styles.textSecondary} max-w-md">Nhập nội dung bài học hoặc tải tài liệu lên, sau đó sử dụng các công cụ bên phải để học hiệu quả hơn</p>
+                        </div>
+                    </div>
+                ` : ''}
             </div>
         </div>
     `;
