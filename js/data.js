@@ -78,14 +78,15 @@ const CATEGORY_ICONS = {
 };
 
 const SUBJECT_ICONS = {
-    "Toán": "images/toán.jpg",
-    "Lý": "images/Lý.jpg",       
-    "Hóa": "images/hóa.png",
-    "Sinh": "images/sinh.jpg",
-    "Sử": "images/sử.jpg",
-    "Địa": "images/địa.png",
-    "Văn": "images/ngữ văn.png", 
-    "Anh": "images/tiếng anh.webp" 
+    // Match actual files in /images (case and accents)
+    "Toán": "images/Toán.png",
+    "Lý": "images/Lý.png",
+    "Hóa": "images/Hoá.png",
+    "Sinh": "images/Sinh.png",
+    "Sử": "images/Lịch sử .png",
+    "Địa": "images/Địa.png",
+    "Văn": "images/Văn.png", 
+    "Anh": "images/Anh.png" 
 };
 
 const SUBJECT_LIST = ["Toán", "Lý", "Hóa", "Sinh", "Sử", "Địa", "Văn", "Anh"];
