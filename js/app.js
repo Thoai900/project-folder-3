@@ -256,7 +256,14 @@ let state = {
     learningSelectedPrompt: null, // Prompt đã chọn
     // Learning session persistence
     learningSessions: [], // Danh sách phiên đã lưu (metadata)
-    activeLearningSessionId: null
+    activeLearningSessionId: null,
+    // Gamification system
+    points: 0,
+    level: 1,
+    streak: 0,
+    lastActivityDate: null,
+    badges: [], // [{id, name, icon, unlocked_at, description}]
+    totalActivities: 0 // Số lần hoàn thành hoạt động học tập
 };
 
 // ==========================================
@@ -1196,9 +1203,16 @@ async function handleLogin(e) {
     const result = await firebaseLogin(email, password);
     
     if (result.success) {
+        // Load gamification data
+        loadGamificationData();
         // Dữ liệu người dùng sẽ được load bởi watchAuthState
         closeModal();
         renderApp();
+        
+        // Add login points
+        if (state.currentUser) {
+            addPoints(10, 'Login');
+        }
     }
 }
 
@@ -4032,7 +4046,58 @@ function renderLoginModal(container) {
                 </div>
                 <!-- Nội dung profile có thanh cuộn -->
                 <div class="flex-1 overflow-y-auto space-y-5 pr-1 custom-scrollbar">
-                    <!-- Thống kê -->
+                    <!-- Gamification Stats -->
+                    <div class="space-y-3">
+                        <!-- Level & Points -->
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="p-3 rounded-xl bg-gradient-to-br from-yellow-600 to-orange-600 text-center shadow-lg">
+                                <div class="text-xs ${styles.textSecondary} font-bold">CẤP ĐỘ</div>
+                                <div class="text-2xl font-black text-white mt-1">${state.level}</div>
+                            </div>
+                            <div class="p-3 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-center shadow-lg">
+                                <div class="text-xs ${styles.textSecondary} font-bold">ĐIỂM</div>
+                                <div class="text-2xl font-black text-white mt-1">${state.points}</div>
+                            </div>
+                            <div class="p-3 rounded-xl bg-gradient-to-br from-red-600 to-pink-600 text-center shadow-lg">
+                                <div class="text-xs ${styles.textSecondary} font-bold">STREAK</div>
+                                <div class="text-2xl font-black text-white mt-1">🔥${state.streak}</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        <div class="p-3 rounded-xl ${styles.cardBg} border ${styles.border}">
+                            <div class="flex justify-between items-center mb-2">
+                                <p class="text-xs font-bold ${styles.textSecondary}">TIẾN ĐỘ CẤP TIẾP THEO</p>
+                                <p class="text-xs font-bold text-indigo-500">${getNextLevelProgress()}%</p>
+                            </div>
+                            <div class="w-full h-2 ${styles.inputBg} rounded-full overflow-hidden border ${styles.border}">
+                                <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500" style="width: ${getNextLevelProgress()}%"></div>
+                            </div>
+                            <p class="text-xs ${styles.textSecondary} mt-2">${state.points} / ${getPointsForLevel(state.level + 1)} điểm</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Badges Section -->
+                    <div>
+                        <h3 class="font-bold ${styles.textPrimary} mb-2 text-xs">HUY HIỆU ĐẠẠT ĐƯỢC</h3>
+                        <div class="grid grid-cols-4 gap-2">
+                            ${getAllBadges().map(badge => {
+                                const unlocked = state.badges.find(b => b.id === badge.id);
+                                return `
+                                    <div class="p-2 rounded-lg ${unlocked ? 'bg-gradient-to-br ' + badge.bgGradient : styles.cardBg} border ${styles.border} flex items-center justify-center relative group cursor-pointer">
+                                        <div class="text-2xl">${badge.icon}</div>
+                                        ${!unlocked ? '<div class="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center"><i data-lucide="lock" size="14" class="text-white/70"></i></div>' : ''}
+                                        <div class="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-32 p-2 rounded-lg ${styles.cardBg} border ${styles.border} text-center text-xs whitespace-nowrap z-10 shadow-xl">
+                                            <p class="font-bold">${badge.name}</p>
+                                            <p class="${styles.textSecondary} text-xs">${badge.description}</p>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                    
+                    <!-- Statistics -->
                     <div class="grid grid-cols-2 gap-3">
                         <div class="p-3 rounded-xl ${styles.cardBg} border ${styles.border} text-center">
                             <div class="text-xl font-bold text-indigo-500 mb-1">${favoriteCount}</div>
@@ -4041,6 +4106,14 @@ function renderLoginModal(container) {
                         <div class="p-3 rounded-xl ${styles.cardBg} border ${styles.border} text-center">
                             <div class="text-xl font-bold text-purple-500 mb-1">${user.customPrompts ? user.customPrompts.length : 0}</div>
                             <p class="text-xs ${styles.textSecondary}">Prompt tạo</p>
+                        </div>
+                        <div class="p-3 rounded-xl ${styles.cardBg} border ${styles.border} text-center">
+                            <div class="text-xl font-bold text-green-500 mb-1">${state.totalActivities}</div>
+                            <p class="text-xs ${styles.textSecondary}">Hoạt động học</p>
+                        </div>
+                        <div class="p-3 rounded-xl ${styles.cardBg} border ${styles.border} text-center">
+                            <div class="text-xl font-bold text-orange-500 mb-1">${state.learningSessions.length}</div>
+                            <p class="text-xs ${styles.textSecondary}">Phiên học</p>
                         </div>
                     </div>
                     <!-- Thông tin tài khoản -->
@@ -5400,6 +5473,10 @@ Nội dung: ${text}`;
         lucide.createIcons();
         chatContainer.scrollTop = chatContainer.scrollHeight;
         showToast("Đã tạo " + cardsData.cards.length + " flashcards!");
+        // Add gamification points
+        if (state.currentUser && cardsData.cards.length > 0) {
+            addPoints(cardsData.cards.length * 10, 'Flashcard creation');
+        }
     } catch (error) {
         document.getElementById(loadingId).remove();
         showToast("Lỗi khi tạo flashcards: " + error.message);
@@ -5593,6 +5670,11 @@ function selectQuizAnswer(quizIndex, selectedOption, correctOption) {
         if (correctAudio) {
             correctAudio.currentTime = 0;
             correctAudio.play().catch(() => {});
+        }
+        
+        // Add points for correct answer
+        if (state.currentUser) {
+            addPoints(25, 'Quiz correct answer');
         }
     } else {
         selectedBtn.style.backgroundColor = '#ef4444';
