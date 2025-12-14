@@ -245,7 +245,9 @@ let state = {
     isLoadingPrompts: false,
     loadingTimer: null,
     // Firebase sync
-    firebaseSynced: false
+    firebaseSynced: false,
+    // Learning space
+    learningTab: 'prompts'
 };
 
 // ==========================================
@@ -1679,6 +1681,8 @@ function renderApp() {
         contentHTML += renderChatView();
     } else if (state.currentView === 'showcase') {
         contentHTML += renderShowcase();
+    } else if (state.currentView === 'learning') {
+        contentHTML += renderLearningSpace();
     } else {
         contentHTML += renderLibrary();
     }
@@ -1827,6 +1831,7 @@ function renderBottomNav() {
         <nav class="fixed bottom-0 left-0 w-full ${baseClass} backdrop-blur-md border-t md:hidden z-50 flex justify-around py-3 px-2 gap-1">
             ${item('library', 'home', 'Trang chủ', "switchView('library')")}
             ${item('showcase', 'globe-2', 'Thế giới AI', "switchView('showcase')")}
+            ${item('learning', 'book-open', 'Học tập', "switchView('learning')")}
             ${item('add', 'plus-circle', 'Thêm mới', "openModal('add')")}
             ${item('profile', 'user', 'Tài khoản', "openModal('login')")}
         </nav>
@@ -2607,6 +2612,169 @@ function renderShowcase() {
             </div>
         </div>
     `;
+}
+
+// ==========================================
+// Learning Space View
+// ==========================================
+function renderLearningSpace() {
+    const styles = getStyles();
+    
+    return `
+        <div class="flex h-screen pt-16 pb-20 md:pb-0">
+            <!-- Sidebar -->
+            <div class="hidden md:block w-64 ${styles.cardBg} border-r ${styles.border} overflow-y-auto">
+                <div class="p-6 space-y-6">
+                    <div>
+                        <h3 class="text-sm font-bold ${styles.textSecondary} uppercase tracking-wider mb-3">Nội dung</h3>
+                        <nav class="space-y-1">
+                            <button onclick="setLearningTab('prompts')" class="w-full text-left px-4 py-2.5 rounded-lg ${state.learningTab === 'prompts' ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/30' : styles.textSecondary + ' hover:bg-white/5'} font-medium transition-all flex items-center gap-3">
+                                <i data-lucide="book-open" size="18"></i> Prompt mẫu
+                            </button>
+                            <button onclick="setLearningTab('scan')" class="w-full text-left px-4 py-2.5 rounded-lg ${state.learningTab === 'scan' ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/30' : styles.textSecondary + ' hover:bg-white/5'} font-medium transition-all flex items-center gap-3">
+                                <i data-lucide="scan" size="18"></i> Quét ảnh
+                            </button>
+                            <button onclick="setLearningTab('notes')" class="w-full text-left px-4 py-2.5 rounded-lg ${state.learningTab === 'notes' ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/30' : styles.textSecondary + ' hover:bg-white/5'} font-medium transition-all flex items-center gap-3">
+                                <i data-lucide="file-text" size="18"></i> Ghi chú
+                            </button>
+                        </nav>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-sm font-bold ${styles.textSecondary} uppercase tracking-wider mb-3">Công cụ</h3>
+                        <nav class="space-y-1">
+                            <button onclick="setLearningTab('summary')" class="w-full text-left px-4 py-2.5 rounded-lg ${state.learningTab === 'summary' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/30' : styles.textSecondary + ' hover:bg-white/5'} font-medium transition-all flex items-center gap-3">
+                                <i data-lucide="file-text" size="18"></i> Tóm tắt
+                            </button>
+                            <button onclick="setLearningTab('flashcards')" class="w-full text-left px-4 py-2.5 rounded-lg ${state.learningTab === 'flashcards' ? 'bg-purple-500/10 text-purple-500 border border-purple-500/30' : styles.textSecondary + ' hover:bg-white/5'} font-medium transition-all flex items-center gap-3">
+                                <i data-lucide="credit-card" size="18"></i> Flashcards
+                            </button>
+                            <button onclick="setLearningTab('quiz')" class="w-full text-left px-4 py-2.5 rounded-lg ${state.learningTab === 'quiz' ? 'bg-green-500/10 text-green-500 border border-green-500/30' : styles.textSecondary + ' hover:bg-white/5'} font-medium transition-all flex items-center gap-3">
+                                <i data-lucide="help-circle" size="18"></i> Câu hỏi
+                            </button>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="flex-1 overflow-y-auto">
+                <div class="max-w-5xl mx-auto px-4 py-8">
+                    ${renderLearningContent()}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderLearningContent() {
+    const styles = getStyles();
+    const tab = state.learningTab || 'prompts';
+    
+    if (tab === 'prompts') {
+        return `
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold ${styles.textPrimary} mb-2">📚 Prompt mẫu học tập</h2>
+                <p class="${styles.textSecondary}">Các prompt được thiết kế sẵn để hỗ trợ học tập hiệu quả</p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-4 mb-6">
+                ${LEARNING_PROMPTS.map(prompt => `
+                    <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6 hover:border-indigo-500/50 transition-all cursor-pointer" onclick="useLearningPrompt('${prompt.id}')">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-xl ${prompt.color} flex items-center justify-center text-2xl flex-shrink-0">
+                                ${prompt.icon}
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-bold ${styles.textPrimary} mb-1">${prompt.title}</h3>
+                                <p class="text-sm ${styles.textSecondary} mb-3">${prompt.description}</p>
+                                <div class="flex gap-2 flex-wrap">
+                                    ${prompt.tags.map(tag => `<span class="px-2 py-1 rounded-full text-xs ${styles.iconBg} ${styles.textSecondary}">${tag}</span>`).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } else if (tab === 'scan') {
+        return `
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold ${styles.textPrimary} mb-2">📸 Quét và phân tích ảnh</h2>
+                <p class="${styles.textSecondary}">Upload ảnh bài tập, tài liệu để AI phân tích và giải thích</p>
+            </div>
+            
+            <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-8">
+                <div class="text-center mb-6">
+                    <div class="w-24 h-24 mx-auto rounded-full ${styles.iconBg} flex items-center justify-center mb-4">
+                        <i data-lucide="upload" size="40" class="${styles.textSecondary}"></i>
+                    </div>
+                    <h3 class="text-xl font-bold ${styles.textPrimary} mb-2">Tải ảnh lên</h3>
+                    <p class="${styles.textSecondary} text-sm">Hỗ trợ JPG, PNG, PDF</p>
+                </div>
+                
+                <input type="file" id="learning-image-input" accept="image/*" class="hidden" onchange="handleLearningImageUpload(event)">
+                <button onclick="document.getElementById('learning-image-input').click()" class="w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="upload" size="20"></i> Chọn ảnh
+                </button>
+                
+                <div id="learning-scan-result" class="mt-6"></div>
+            </div>
+        `;
+    } else if (tab === 'summary') {
+        return `
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold ${styles.textPrimary} mb-2">📝 Tóm tắt nội dung</h2>
+                <p class="${styles.textSecondary}">Nhập văn bản dài để AI tóm tắt các ý chính</p>
+            </div>
+            
+            <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6">
+                <textarea id="summary-input" class="w-full h-48 ${styles.inputBg} border ${styles.border} rounded-xl p-4 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all resize-none" placeholder="Dán nội dung cần tóm tắt vào đây..."></textarea>
+                <button onclick="generateSummary()" class="mt-4 w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="file-text" size="20"></i> Tạo tóm tắt
+                </button>
+                <div id="summary-result" class="mt-6"></div>
+            </div>
+        `;
+    } else if (tab === 'flashcards') {
+        return `
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold ${styles.textPrimary} mb-2">🎴 Tạo Flashcards</h2>
+                <p class="${styles.textSecondary}">Nhập nội dung học để AI tạo flashcards ôn tập</p>
+            </div>
+            
+            <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6">
+                <textarea id="flashcard-input" class="w-full h-48 ${styles.inputBg} border ${styles.border} rounded-xl p-4 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all resize-none" placeholder="Nhập nội dung cần tạo flashcard..."></textarea>
+                <button onclick="generateFlashcards()" class="mt-4 w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="credit-card" size="20"></i> Tạo Flashcards
+                </button>
+                <div id="flashcard-result" class="mt-6"></div>
+            </div>
+        `;
+    } else if (tab === 'quiz') {
+        return `
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold ${styles.textPrimary} mb-2">❓ Tạo câu hỏi kiểm tra</h2>
+                <p class="${styles.textSecondary}">Nhập nội dung để AI tạo câu hỏi trắc nghiệm và tự luận</p>
+            </div>
+            
+            <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6">
+                <textarea id="quiz-input" class="w-full h-48 ${styles.inputBg} border ${styles.border} rounded-xl p-4 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all resize-none" placeholder="Nhập nội dung để tạo câu hỏi kiểm tra..."></textarea>
+                <button onclick="generateQuiz()" class="mt-4 w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="help-circle" size="20"></i> Tạo câu hỏi
+                </button>
+                <div id="quiz-result" class="mt-6"></div>
+            </div>
+        `;
+    } else {
+        return `
+            <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-8 text-center">
+                <i data-lucide="construction" size="48" class="${styles.textSecondary} mx-auto mb-4"></i>
+                <h3 class="text-xl font-bold ${styles.textPrimary} mb-2">Đang phát triển</h3>
+                <p class="${styles.textSecondary}">Tính năng này sẽ sớm được ra mắt</p>
+            </div>
+        `;
+    }
 }
 
 // --- Modals ---
@@ -4127,6 +4295,258 @@ Nội dung: ${text}`;
     } catch (error) {
         document.getElementById(loadingId).remove();
         showToast("Lỗi khi tạo câu hỏi: " + error.message);
+    }
+}
+
+// ==========================================
+// Learning Space Functions
+// ==========================================
+
+function setLearningTab(tab) {
+    state.learningTab = tab;
+    renderApp();
+}
+
+function useLearningPrompt(promptId) {
+    const prompt = LEARNING_PROMPTS.find(p => p.id === promptId);
+    if (!prompt) return;
+    
+    state.currentView = 'chat';
+    state.chatHistory = [];
+    renderApp();
+    
+    // Set prompt vào preview
+    setTimeout(() => {
+        const previewPrompt = document.getElementById('preview-prompt');
+        if (previewPrompt) {
+            previewPrompt.value = prompt.prompt;
+            previewPrompt.focus();
+        }
+    }, 100);
+}
+
+async function handleLearningImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const resultDiv = document.getElementById('learning-scan-result');
+    const styles = getStyles();
+    
+    resultDiv.innerHTML = `
+        <div class="${styles.cardBg} border ${styles.border} rounded-xl p-4">
+            <div class="flex items-center gap-3">
+                <i data-lucide="loader-2" class="animate-spin text-indigo-500" size="20"></i>
+                <span class="${styles.textPrimary}">Đang xử lý ảnh...</span>
+            </div>
+        </div>
+    `;
+    
+    try {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const base64Image = e.target.result.split(',')[1];
+            
+            const url = '/api/image-scan';
+            const idToken = await getFirebaseIdToken();
+            
+            const headers = { 'Content-Type': 'application/json' };
+            if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ 
+                    imageBase64: base64Image,
+                    action: 'analyze'
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.error) throw new Error(data.error);
+            
+            const result = data.result || 'Không thể phân tích ảnh';
+            
+            resultDiv.innerHTML = `
+                <div class="${styles.cardBg} border ${styles.border} rounded-xl p-6">
+                    <h4 class="font-bold ${styles.textPrimary} mb-3 flex items-center gap-2">
+                        <i data-lucide="check-circle" class="text-green-500" size="20"></i>
+                        Kết quả phân tích
+                    </h4>
+                    <div class="whitespace-pre-wrap ${styles.textPrimary} text-sm leading-relaxed mb-4">${simpleMarkdown(result)}</div>
+                    <button onclick="copyToClipboard(\`${result.replace(/`/g, '\\`')}\`)" class="px-4 py-2 rounded-lg ${styles.iconBg} hover:bg-indigo-500/10 ${styles.textPrimary} text-sm font-bold transition-all flex items-center gap-2">
+                        <i data-lucide="copy" size="16"></i> Sao chép
+                    </button>
+                </div>
+            `;
+            lucide.createIcons();
+        };
+        reader.readAsDataURL(file);
+    } catch (error) {
+        resultDiv.innerHTML = `
+            <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+                <p class="text-red-500 text-sm">Lỗi: ${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+async function generateSummary() {
+    const input = document.getElementById('summary-input').value.trim();
+    if (!input) {
+        showToast('Vui lòng nhập nội dung cần tóm tắt');
+        return;
+    }
+    
+    const resultDiv = document.getElementById('summary-result');
+    const styles = getStyles();
+    
+    resultDiv.innerHTML = `
+        <div class="${styles.cardBg} border ${styles.border} rounded-xl p-4">
+            <div class="flex items-center gap-3">
+                <i data-lucide="loader-2" class="animate-spin text-blue-500" size="20"></i>
+                <span class="${styles.textPrimary}">Đang tạo tóm tắt...</span>
+            </div>
+        </div>
+    `;
+    
+    try {
+        const prompt = `Hãy tóm tắt nội dung sau đây một cách ngắn gọn và súc tích, nêu các ý chính:\n\n${input}`;
+        const summary = await callGeminiAPI(prompt);
+        
+        resultDiv.innerHTML = `
+            <div class="${styles.cardBg} border border-blue-500/30 rounded-xl p-6">
+                <h4 class="font-bold text-blue-500 mb-3 flex items-center gap-2">
+                    <i data-lucide="file-text" size="20"></i>
+                    Tóm tắt
+                </h4>
+                <div class="whitespace-pre-wrap ${styles.textPrimary} text-sm leading-relaxed mb-4">${simpleMarkdown(summary)}</div>
+                <button onclick="copyToClipboard(\`${summary.replace(/`/g, '\\`')}\`)" class="px-4 py-2 rounded-lg ${styles.iconBg} hover:bg-blue-500/10 text-blue-500 text-sm font-bold transition-all flex items-center gap-2">
+                    <i data-lucide="copy" size="16"></i> Sao chép
+                </button>
+            </div>
+        `;
+        lucide.createIcons();
+        showToast('Đã tạo tóm tắt!');
+    } catch (error) {
+        resultDiv.innerHTML = `
+            <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+                <p class="text-red-500 text-sm">Lỗi: ${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+async function generateFlashcards() {
+    const input = document.getElementById('flashcard-input').value.trim();
+    if (!input) {
+        showToast('Vui lòng nhập nội dung');
+        return;
+    }
+    
+    const resultDiv = document.getElementById('flashcard-result');
+    const styles = getStyles();
+    
+    resultDiv.innerHTML = `
+        <div class="${styles.cardBg} border ${styles.border} rounded-xl p-4">
+            <div class="flex items-center gap-3">
+                <i data-lucide="loader-2" class="animate-spin text-purple-500" size="20"></i>
+                <span class="${styles.textPrimary}">Đang tạo flashcards...</span>
+            </div>
+        </div>
+    `;
+    
+    try {
+        const prompt = `Từ nội dung sau, hãy tạo 5-7 flashcard để ôn tập. Mỗi flashcard có:
+- Mặt trước (câu hỏi/khái niệm)
+- Mặt sau (câu trả lời/giải thích)
+
+Format:
+---
+[Mặt trước]
+Câu hỏi hoặc khái niệm
+
+[Mặt sau]
+Câu trả lời hoặc giải thích chi tiết
+---
+
+Nội dung: ${input}`;
+        
+        const flashcards = await callGeminiAPI(prompt);
+        
+        resultDiv.innerHTML = `
+            <div class="${styles.cardBg} border border-purple-500/30 rounded-xl p-6">
+                <h4 class="font-bold text-purple-500 mb-3 flex items-center gap-2">
+                    <i data-lucide="credit-card" size="20"></i>
+                    Flashcards ôn tập
+                </h4>
+                <div class="whitespace-pre-wrap ${styles.textPrimary} text-sm leading-relaxed mb-4">${simpleMarkdown(flashcards)}</div>
+                <button onclick="copyToClipboard(\`${flashcards.replace(/`/g, '\\`')}\`)" class="px-4 py-2 rounded-lg ${styles.iconBg} hover:bg-purple-500/10 text-purple-500 text-sm font-bold transition-all flex items-center gap-2">
+                    <i data-lucide="copy" size="16"></i> Sao chép
+                </button>
+            </div>
+        `;
+        lucide.createIcons();
+        showToast('Đã tạo flashcards!');
+    } catch (error) {
+        resultDiv.innerHTML = `
+            <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+                <p class="text-red-500 text-sm">Lỗi: ${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+async function generateQuiz() {
+    const input = document.getElementById('quiz-input').value.trim();
+    if (!input) {
+        showToast('Vui lòng nhập nội dung');
+        return;
+    }
+    
+    const resultDiv = document.getElementById('quiz-result');
+    const styles = getStyles();
+    
+    resultDiv.innerHTML = `
+        <div class="${styles.cardBg} border ${styles.border} rounded-xl p-4">
+            <div class="flex items-center gap-3">
+                <i data-lucide="loader-2" class="animate-spin text-green-500" size="20"></i>
+                <span class="${styles.textPrimary}">Đang tạo câu hỏi...</span>
+            </div>
+        </div>
+    `;
+    
+    try {
+        const prompt = `Dựa trên nội dung sau, hãy tạo 5 câu hỏi kiểm tra (trắc nghiệm hoặc tự luận) để đánh giá mức độ hiểu biết. 
+Mỗi câu hỏi nên có:
+- Câu hỏi
+- Đáp án đúng (nếu là trắc nghiệm thì có 4 lựa chọn A, B, C, D)
+- Giải thích ngắn gọn
+
+Nội dung: ${input}`;
+        
+        const quiz = await callGeminiAPI(prompt);
+        
+        resultDiv.innerHTML = `
+            <div class="${styles.cardBg} border border-green-500/30 rounded-xl p-6">
+                <h4 class="font-bold text-green-500 mb-3 flex items-center gap-2">
+                    <i data-lucide="help-circle" size="20"></i>
+                    Câu hỏi kiểm tra
+                </h4>
+                <div class="whitespace-pre-wrap ${styles.textPrimary} text-sm leading-relaxed mb-4">${simpleMarkdown(quiz)}</div>
+                <button onclick="copyToClipboard(\`${quiz.replace(/`/g, '\\`')}\`)" class="px-4 py-2 rounded-lg ${styles.iconBg} hover:bg-green-500/10 text-green-500 text-sm font-bold transition-all flex items-center gap-2">
+                    <i data-lucide="copy" size="16"></i> Sao chép
+                </button>
+            </div>
+        `;
+        lucide.createIcons();
+        showToast('Đã tạo câu hỏi!');
+    } catch (error) {
+        resultDiv.innerHTML = `
+            <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+                <p class="text-red-500 text-sm">Lỗi: ${error.message}</p>
+            </div>
+        `;
     }
 }
 

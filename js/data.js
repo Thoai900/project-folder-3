@@ -151,3 +151,60 @@ const THEME_CONFIG = {
         scrollThumb: "bg-slate-300"
     }
 };
+
+const LEARNING_PROMPTS = [
+    { 
+        id: 'math-solve', 
+        title: 'Giải toán từng bước', 
+        description: 'Hướng dẫn giải bài toán chi tiết', 
+        icon: '🔢',
+        color: 'bg-blue-500/10',
+        tags: ['Toán', 'Bài tập'],
+        prompt: 'Hãy giải bài toán sau theo từng bước chi tiết, giải thích rõ ràng mỗi bước:\n\n[Nhập đề bài ở đây]'
+    },
+    { 
+        id: 'explain-concept', 
+        title: 'Giải thích khái niệm', 
+        description: 'Làm rõ khái niệm khó hiểu', 
+        icon: '💡',
+        color: 'bg-yellow-500/10',
+        tags: ['Lý thuyết', 'Hiểu bài'],
+        prompt: 'Hãy giải thích khái niệm sau đây một cách đơn giản, dễ hiểu với ví dụ minh họa:\n\n[Nhập khái niệm]'
+    },
+    { 
+        id: 'essay-outline', 
+        title: 'Dàn ý bài văn', 
+        description: 'Tạo dàn ý chi tiết cho bài văn', 
+        icon: '📝',
+        color: 'bg-purple-500/10',
+        tags: ['Văn', 'Viết'],
+        prompt: 'Hãy lập dàn ý chi tiết cho bài văn với đề bài:\n\n[Nhập đề bài]'
+    },
+    { 
+        id: 'practice-english', 
+        title: 'Luyện tiếng Anh', 
+        description: 'Hội thoại và sửa lỗi tiếng Anh', 
+        icon: '🗣️',
+        color: 'bg-green-500/10',
+        tags: ['Anh', 'Giao tiếp'],
+        prompt: 'Hãy trò chuyện với tôi bằng tiếng Anh về chủ đề [chủ đề]. Sau mỗi câu của tôi, hãy sửa lỗi và gợi ý cách nói tự nhiên hơn.'
+    },
+    { 
+        id: 'history-timeline', 
+        title: 'Trục thời gian lịch sử', 
+        description: 'Tạo timeline sự kiện lịch sử', 
+        icon: '⏰',
+        color: 'bg-red-500/10',
+        tags: ['Sử', 'Ghi nhớ'],
+        prompt: 'Hãy tạo một trục thời gian (timeline) chi tiết về giai đoạn lịch sử:\n\n[Nhập giai đoạn]'
+    },
+    { 
+        id: 'science-experiment', 
+        title: 'Thí nghiệm khoa học', 
+        description: 'Hướng dẫn thí nghiệm an toàn', 
+        icon: '🔬',
+        color: 'bg-teal-500/10',
+        tags: ['Lý', 'Hóa', 'Thí nghiệm'],
+        prompt: 'Hãy hướng dẫn thí nghiệm để chứng minh/điều chế:\n\n[Nhập tên thí nghiệm]\n\nBao gồm: dụng cụ, các bước thực hiện và lưu ý an toàn.'
+    }
+];
