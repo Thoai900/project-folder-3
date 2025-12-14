@@ -479,6 +479,17 @@ function renderEmptyOverlay(title = 'Không tìm thấy dữ liệu', message = 
     `;
 }
 
+// Imperative helper to show the empty toast outside render
+function showEmptyToast(title, message, imageSrc = 'images/Trạng thái rỗng.png') {
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = renderEmptyOverlay(title, message, imageSrc);
+    const toast = wrapper.firstElementChild;
+    if (!toast) return;
+    document.body.appendChild(toast);
+    if (window.lucide?.createIcons) lucide.createIcons();
+    setTimeout(() => toast.remove(), 3800);
+}
+
 
 
 
@@ -546,7 +557,7 @@ Hãy phân tích và trình bày lại nội dung này một cách có cấu tr�
         console.error('Error processing prompt:', error);
         state.isLoadingPrompts = false;
         renderApp();
-        showToast('Lỗi xử lý nội dung: ' + error.message, 'error');
+        showEmptyToast('Lỗi xử lý nội dung', error.message);
     }
 }
 
@@ -633,7 +644,7 @@ async function handleLearningFileUpload(event) {
         console.error('Error uploading files:', error);
         state.isLoadingPrompts = false;
         renderApp();
-        showToast('Lỗi tải tệp lên: ' + error.message, 'error');
+        showEmptyToast('Lỗi tải tệp', error.message);
     }
 }
 
@@ -705,7 +716,7 @@ async function processLearningAction(action) {
         console.error('Error processing learning action:', error);
         state.isLoadingPrompts = false;
         renderApp();
-        showToast('Lỗi xử lý: ' + error.message, 'error');
+        showEmptyToast('Lỗi xử lý', error.message);
     }
 }
 
