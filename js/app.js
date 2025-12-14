@@ -1933,6 +1933,18 @@ function typeWriter(element, htmlContent, speed = 100) {
                 } else {
                     i++;
                 }
+            } else if (htmlContent[i] === '&') {
+                // HTML entity (e.g., &amp;, &#039;). Treat as single token
+                const semi = htmlContent.indexOf(';', i);
+                if (semi !== -1) {
+                    const entity = htmlContent.substring(i, semi + 1);
+                    tokens.push({ type: 'entity', content: entity });
+                    i = semi + 1;
+                } else {
+                    // Fallback: treat as char if no semicolon found
+                    tokens.push({ type: 'char', content: htmlContent[i] });
+                    i++;
+                }
             } else {
                 // Text node - lấy từng ký tự
                 tokens.push({
@@ -1974,6 +1986,23 @@ function typeWriter(element, htmlContent, speed = 100) {
                     builtHTML += token.content;
                     tokenIndex++;
                     setTimeout(typeNextChar, 0); // Không delay cho tag
+                } else if (token.type === 'entity') {
+                    // Entity represents a single visible character
+                    if (charCount < fullText.length) {
+                        builtHTML += token.content;
+                        charCount++;
+                        tokenIndex++;
+                        element.innerHTML = builtHTML;
+                        const codeElements = element.querySelectorAll('pre code');
+                        codeElements.forEach((block) => {
+                            if (window.hljs && block.textContent.trim()) {
+                                try {
+                                    hljs.highlightElement(block);
+                                } catch (e) {}
+                            }
+                        });
+                        setTimeout(typeNextChar, speed);
+                    }
                 } else {
                     // Character
                     if (charCount < fullText.length) {
