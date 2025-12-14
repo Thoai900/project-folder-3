@@ -46,19 +46,8 @@ async function firebaseSignUp(email, password, name, userType = 'student') {
         });
         
         console.log('✅ Đăng ký thành công:', userId);
-        // Gửi email xác minh
-        if (window.firebaseSendEmailVerification) {
-            try {
-                await window.firebaseSendEmailVerification(user);
-                console.log('📧 Email xác minh đã gửi tới:', email);
-                showToast(`✓ Đăng ký thành công! Kiểm tra email ${email} để xác minh (kể cả spam).`, 'info');
-            } catch (emailError) {
-                console.error('❌ Lỗi gửi email xác minh:', emailError);
-                showToast(`✓ Đăng ký thành công nhưng không gửi được email xác minh. Vui lòng yêu cầu gửi lại.`, 'warning');
-            }
-        } else {
-            showToast(`✓ Chào mừng ${name}! Đăng ký thành công.`, 'success');
-        }
+        // Bỏ yêu cầu xác minh email, đăng ký xong là dùng được
+        showToast(`✓ Chào mừng ${name || email}! Đăng ký thành công.`, 'success');
         
         return { success: true, userId };
     } catch (error) {
@@ -96,16 +85,6 @@ async function firebaseLogin(email, password) {
         const user = userCredential.user;
         const userId = user.uid;
 
-        // Yêu cầu email đã xác minh
-        if (!user.emailVerified) {
-            if (window.firebaseSendEmailVerification) {
-                await window.firebaseSendEmailVerification(user);
-            }
-            showToast('Vui lòng xác minh email trước khi sử dụng.', 'warning');
-            await window.firebaseSignOut(window.firebaseAuth);
-            return { success: false, error: 'Email chưa xác minh' };
-        }
-        
         // Cập nhật thời gian đăng nhập cuối cùng
         const userRef = window.firebaseRef(window.firebaseDB, `users/${userId}`);
         await window.firebaseUpdate(userRef, {
@@ -394,23 +373,7 @@ function watchAuthState(callback) {
     return window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
         if (user) {
             console.log('✅ Người dùng đăng nhập:', user.uid);
-            console.log('📧 Email verified:', user.emailVerified);
             console.log('🔐 Auth providers:', user.providerData?.map(p => p.providerId));
-
-            // Google OAuth users có email đã được verify tự động
-            // Chỉ yêu cầu email verification cho email/password users
-            const isGoogleUser = user.providerData?.some(p => p.providerId === 'google.com');
-            
-            if (!user.emailVerified && !isGoogleUser) {
-                console.warn('⚠️ Email chưa xác minh cho user email/password');
-                showToast('Email chưa xác minh. Vui lòng kiểm tra hộp thư.', 'warning');
-                if (window.firebaseSendEmailVerification) {
-                    await window.firebaseSendEmailVerification(user);
-                }
-                await window.firebaseSignOut(window.firebaseAuth);
-                callback(null);
-                return;
-            }
             
             // Lấy dữ liệu người dùng từ Database
             const userData = await getUserData(user.uid);
