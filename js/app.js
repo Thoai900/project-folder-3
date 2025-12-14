@@ -956,6 +956,41 @@ function applyTheme() {
 }
 
 function showToast(message) {
+
+    // ==============================
+    // Global Progress Bar Controls
+    // ==============================
+    const ProgressBar = {
+        el: null,
+        init() {
+            this.el = document.getElementById('global-progress');
+        },
+        start() {
+            if (!this.el) this.init();
+            if (!this.el) return;
+            this.el.style.width = '0%';
+            this.el.style.opacity = '1';
+            // Kick off with small progress then grow slowly
+            setTimeout(() => { this.set(20); }, 50);
+            this._interval && clearInterval(this._interval);
+            this._interval = setInterval(() => {
+                const current = parseFloat(this.el.style.width) || 0;
+                if (current < 90) this.set(current + Math.random() * 10);
+            }, 500);
+        },
+        set(n) {
+            if (!this.el) this.init();
+            if (!this.el) return;
+            this.el.style.width = Math.min(100, Math.max(0, n)) + '%';
+        },
+        done() {
+            if (!this.el) this.init();
+            if (!this.el) return;
+            this.set(100);
+            this._interval && clearInterval(this._interval);
+            setTimeout(() => { this.el.style.opacity = '0'; this.el.style.width = '0%'; }, 300);
+        }
+    };
     const container = document.getElementById('toast-container');
     const content = document.getElementById('toast-content');
     const msgSpan = document.getElementById('toast-message');
@@ -1581,7 +1616,7 @@ async function handleImageScan() {
             })
         });
 
-        const data = await response.json();
+        const respData = await response.json();
         if(data.error) throw new Error(data.error.message || data.error);
         
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Không tìm thấy văn bản nào.";
@@ -1633,7 +1668,7 @@ async function refineScannedText() {
             })
         });
 
-        const data = await response.json();
+        const refineData = await response.json();
         if(data.error) throw new Error(data.error.message || data.error);
 
         const refinedText = data.candidates?.[0]?.content?.parts?.[0]?.text || currentText;
@@ -1669,7 +1704,7 @@ async function analyzeScannedText(currentText) {
             headers,
             body: JSON.stringify({ action: 'analyze', currentText })
         });
-        const data = await response.json();
+        const scanData = await response.json();
         const analysis = data.analysis || {};
 
         const container = document.getElementById('scan-result').parentElement;
@@ -1859,7 +1894,7 @@ async function generateSmartPrompt() {
             })
         });
 
-        const data = await response.json();
+        const smartData = await response.json();
         if(data.error) throw new Error(data.error.message || data.error);
 
         let jsonText = data.candidates[0].content.parts[0].text;
@@ -2197,6 +2232,8 @@ async function getFirebaseIdToken() {
 
 // API Call Logic (Updated with better Error Handling & User Key)
 async function runPrompt() {
+        ProgressBar.start();
+        const data = await response.json();
     const promptText = document.getElementById('preview-prompt').value;
     const temperature = parseFloat(document.getElementById('temp-slider').value);
     
@@ -2233,33 +2270,26 @@ async function runPrompt() {
 
     try {
         // Call internal serverless function endpoint
+        ProgressBar.start();
         const url = '/api/gemini';
         const idToken = await getFirebaseIdToken();
-        
         const headers = { 'Content-Type': 'application/json' };
-        if (idToken) {
-            headers['Authorization'] = `Bearer ${idToken}`;
-        }
-        
+        if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
+
         const response = await fetch(url, {
             method: 'POST',
-            headers: headers,
-            body: JSON.stringify({ 
-                prompt: promptText,
-                temperature: temperature
-            })
+            headers,
+            body: JSON.stringify({ prompt: promptText, temperature })
         });
 
         const data = await response.json();
-        
-        if (data.error) {
-            throw new Error(data.error.message || data.error || "API Error");
-        }
+        if (data.error) throw new Error(data.error.message || data.error || 'API Error');
 
-        const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Không có phản hồi từ AI.";
+        const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Không có phản hồi từ AI.';
         const provider = data.provider || 'gemini';
-        
+
         document.getElementById(loadingId).remove();
+        ProgressBar.done();
         state.chatHistory.push({ role: 'ai', content: responseText });
         
         // Tạo bong bóng chat của AI trước (rỗng)
@@ -2352,7 +2382,8 @@ async function runPrompt() {
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
     } catch (error) {
-        document.getElementById(loadingId).remove();
+        document.getElementById(loadingId)?.remove();
+        ProgressBar.done();
         const errorHTML = `
             <div class="flex gap-4 justify-start">
                 <div class="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center mt-1"><i data-lucide="alert-triangle" class="text-white" size="16"></i></div>
