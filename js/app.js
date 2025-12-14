@@ -5356,41 +5356,93 @@ async function createFlashcards(resultIndex) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
     
     try {
-        const prompt = `Từ nội dung sau, hãy tạo 5-7 flashcard để ôn tập. Mỗi flashcard có:
-- Mặt trước (câu hỏi/khái niệm)
-- Mặt sau (câu trả lời/giải thích)
+        const prompt = `Từ nội dung sau, hãy tạo 5-7 flashcard để ôn tập. Trả về CHÍNH XÁC định dạng JSON sau:
 
-Format:
----
-[Mặt trước]
-Câu hỏi hoặc khái niệm
-
-[Mặt sau]
-Câu trả lời hoặc giải thích chi tiết
----
+{
+  "cards": [
+    {"front": "Câu hỏi 1", "back": "Câu trả lời 1"},
+    {"front": "Câu hỏi 2", "back": "Câu trả lời 2"}
+  ]
+}
 
 Nội dung: ${text}`;
         
-        const flashcards = await callGeminiAPI(prompt);
+        const response = await callGeminiAPI(prompt);
         
         document.getElementById(loadingId).remove();
         
+        // Parse JSON response
+        let cardsData;
+        try {
+            const jsonMatch = response.match(/\{[\s\S]*\}/);
+            cardsData = JSON.parse(jsonMatch ? jsonMatch[0] : response);
+        } catch {
+            cardsData = { cards: [{ front: "Lỗi parse", back: response }] };
+        }
+        
+        const containerId = 'flashcard-container-' + Date.now();
         const flashcardHTML = `
             <div class="flex gap-4 justify-start">
                 <div class="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center mt-1 shadow-lg"><i data-lucide="credit-card" class="text-white" size="16"></i></div>
-                <div class="max-w-[85%] rounded-2xl p-5 shadow-md ${styles.cardBg} border border-purple-500/30 ${styles.textPrimary} rounded-tl-sm">
-                    <h4 class="font-bold text-purple-500 mb-2">🎴 Flashcards ôn tập</h4>
-                    <div class="whitespace-pre-wrap text-sm leading-relaxed">${simpleMarkdown(flashcards)}</div>
+                <div class="max-w-[85%]">
+                    <h4 class="font-bold text-purple-500 mb-3 flex items-center gap-2">🎴 Flashcards ôn tập (Click để lật)</h4>
+                    <div id="${containerId}" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                 </div>
             </div>
         `;
         chatContainer.insertAdjacentHTML('beforeend', flashcardHTML);
+        
+        const container = document.getElementById(containerId);
+        cardsData.cards.forEach((card, idx) => {
+            container.insertAdjacentHTML('beforeend', createFlashcardHTML(card.front, card.back, idx));
+        });
+        
         lucide.createIcons();
         chatContainer.scrollTop = chatContainer.scrollHeight;
-        showToast("Đã tạo flashcards!");
+        showToast("Đã tạo " + cardsData.cards.length + " flashcards!");
     } catch (error) {
         document.getElementById(loadingId).remove();
         showToast("Lỗi khi tạo flashcards: " + error.message);
+    }
+}
+
+function createFlashcardHTML(front, back, index) {
+    const styles = getStyles();
+    const isDark = state.theme === 'dark';
+    return `
+        <div class="flashcard-wrapper" style="perspective: 1000px; height: 200px;">
+            <div id="flashcard-${index}" class="flashcard-inner" style="position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; cursor: pointer;" onclick="flipFlashcard(${index})">
+                <div class="flashcard-front" style="position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; padding: 1.5rem; border-radius: 1rem; ${isDark ? 'background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);' : 'background: linear-gradient(135deg, #c084fc 0%, #e9d5ff 100%);'} box-shadow: 0 10px 25px rgba(139, 92, 246, 0.3); border: 2px solid rgba(139, 92, 246, 0.5);">
+                    <div style="text-align: center; color: white; font-size: 1.125rem; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">${front}</div>
+                </div>
+                <div class="flashcard-back" style="position: absolute; width: 100%; height: 100%; backface-visibility: hidden; transform: rotateY(180deg); display: flex; align-items: center; justify-content: center; padding: 1.5rem; border-radius: 1rem; ${isDark ? 'background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);' : 'background: linear-gradient(135deg, #f9a8d4 0%, #fce7f3 100%);'} box-shadow: 0 10px 25px rgba(236, 72, 153, 0.3); border: 2px solid rgba(236, 72, 153, 0.5);">
+                    <div style="text-align: center; color: white; font-size: 1rem; font-weight: 500; text-shadow: 0 2px 4px rgba(0,0,0,0.2); overflow-y: auto; max-height: 100%;">${back}</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+let flipAudio = null;
+function initFlipAudio() {
+    if (!flipAudio) {
+        flipAudio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBDGH0fPTgjMGHm7A7+OZURE=');
+        flipAudio.volume = 0.3;
+    }
+}
+
+function flipFlashcard(index) {
+    initFlipAudio();
+    const card = document.getElementById('flashcard-' + index);
+    if (!card) return;
+    
+    const isFlipped = card.style.transform === 'rotateY(180deg)';
+    card.style.transform = isFlipped ? 'rotateY(0deg)' : 'rotateY(180deg)';
+    
+    // Play flip sound
+    if (flipAudio) {
+        flipAudio.currentTime = 0;
+        flipAudio.play().catch(() => {});
     }
 }
 
@@ -5415,35 +5467,163 @@ async function createQuiz(resultIndex) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
     
     try {
-        const prompt = `Dựa trên nội dung sau, hãy tạo 5 câu hỏi kiểm tra (trắc nghiệm hoặc tự luận) để đánh giá mức độ hiểu biết. 
-Mỗi câu hỏi nên có:
-- Câu hỏi
-- Đáp án đúng (nếu là trắc nghiệm thì có 4 lựa chọn A, B, C, D)
-- Giải thích ngắn gọn
+        const prompt = `Dựa trên nội dung sau, hãy tạo 5 câu hỏi trắc nghiệm. Trả về CHÍNH XÁC định dạng JSON:
+
+{
+  "questions": [
+    {
+      "question": "Câu hỏi số 1?",
+      "options": ["A. Đáp án A", "B. Đáp án B", "C. Đáp án C", "D. Đáp án D"],
+      "correct": 0,
+      "explanation": "Giải thích tại sao đáp án đúng"
+    }
+  ]
+}
 
 Nội dung: ${text}`;
         
-        const quiz = await callGeminiAPI(prompt);
+        const response = await callGeminiAPI(prompt);
         
         document.getElementById(loadingId).remove();
         
+        // Parse JSON
+        let quizData;
+        try {
+            const jsonMatch = response.match(/\{[\s\S]*\}/);
+            quizData = JSON.parse(jsonMatch ? jsonMatch[0] : response);
+        } catch {
+            quizData = { questions: [] };
+        }
+        
+        const containerId = 'quiz-container-' + Date.now();
         const quizHTML = `
             <div class="flex gap-4 justify-start">
                 <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center mt-1 shadow-lg"><i data-lucide="help-circle" class="text-white" size="16"></i></div>
-                <div class="max-w-[85%] rounded-2xl p-5 shadow-md ${styles.cardBg} border border-green-500/30 ${styles.textPrimary} rounded-tl-sm">
-                    <h4 class="font-bold text-green-500 mb-2">❓ Câu hỏi kiểm tra</h4>
-                    <div class="whitespace-pre-wrap text-sm leading-relaxed">${simpleMarkdown(quiz)}</div>
+                <div class="max-w-[85%]">
+                    <h4 class="font-bold text-green-500 mb-3 flex items-center gap-2">❓ Câu hỏi trắc nghiệm (Click để chọn)</h4>
+                    <div id="${containerId}" class="space-y-4"></div>
                 </div>
             </div>
         `;
         chatContainer.insertAdjacentHTML('beforeend', quizHTML);
+        
+        const container = document.getElementById(containerId);
+        quizData.questions.forEach((q, idx) => {
+            container.insertAdjacentHTML('beforeend', createQuizHTML(q, idx));
+        });
+        
         lucide.createIcons();
         chatContainer.scrollTop = chatContainer.scrollHeight;
-        showToast("Đã tạo câu hỏi kiểm tra!");
+        showToast("Đã tạo " + quizData.questions.length + " câu hỏi!");
     } catch (error) {
         document.getElementById(loadingId).remove();
         showToast("Lỗi khi tạo câu hỏi: " + error.message);
     }
+}
+
+function createQuizHTML(question, index) {
+    const styles = getStyles();
+    const isDark = state.theme === 'dark';
+    return `
+        <div class="${styles.cardBg} border ${styles.border} rounded-xl p-4 shadow-sm">
+            <div class="font-semibold ${styles.textPrimary} mb-3">${index + 1}. ${question.question}</div>
+            <div class="space-y-2" id="quiz-options-${index}">
+                ${question.options.map((opt, i) => `
+                    <button 
+                        onclick="selectQuizAnswer(${index}, ${i}, ${question.correct})" 
+                        class="quiz-option w-full text-left p-3 rounded-lg border-2 ${isDark ? 'border-gray-700 hover:border-green-500/50 bg-gray-800/50' : 'border-gray-200 hover:border-green-500/50 bg-white'} transition-all ${styles.textPrimary} font-medium"
+                        data-quiz="${index}"
+                        data-option="${i}"
+                    >
+                        ${opt}
+                    </button>
+                `).join('')}
+            </div>
+            <div id="quiz-feedback-${index}" class="mt-3 hidden"></div>
+        </div>
+    `;
+}
+
+let correctAudio = null;
+let wrongAudio = null;
+
+function initQuizAudio() {
+    if (!correctAudio) {
+        // Correct sound - happy tone
+        correctAudio = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+        correctAudio.volume = 0.4;
+    }
+    if (!wrongAudio) {
+        // Wrong sound - buzz tone
+        wrongAudio = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+        wrongAudio.volume = 0.3;
+    }
+}
+
+function selectQuizAnswer(quizIndex, selectedOption, correctOption) {
+    initQuizAudio();
+    
+    const optionsContainer = document.getElementById('quiz-options-' + quizIndex);
+    const feedbackDiv = document.getElementById('quiz-feedback-' + quizIndex);
+    const styles = getStyles();
+    
+    // Disable all options
+    const buttons = optionsContainer.querySelectorAll('button');
+    buttons.forEach(btn => btn.disabled = true);
+    
+    const isCorrect = selectedOption === correctOption;
+    const selectedBtn = buttons[selectedOption];
+    const correctBtn = buttons[correctOption];
+    
+    // Animate selected button
+    if (isCorrect) {
+        selectedBtn.classList.add('animate-pulse');
+        selectedBtn.style.backgroundColor = '#10b981';
+        selectedBtn.style.borderColor = '#10b981';
+        selectedBtn.style.color = 'white';
+        selectedBtn.style.transform = 'scale(1.02)';
+        
+        feedbackDiv.innerHTML = `
+            <div class="flex items-center gap-2 text-green-500 font-semibold p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                <i data-lucide="check-circle" size="20"></i>
+                <span>✅ Chính xác!</span>
+            </div>
+        `;
+        
+        if (correctAudio) {
+            correctAudio.currentTime = 0;
+            correctAudio.play().catch(() => {});
+        }
+    } else {
+        selectedBtn.style.backgroundColor = '#ef4444';
+        selectedBtn.style.borderColor = '#ef4444';
+        selectedBtn.style.color = 'white';
+        selectedBtn.classList.add('animate-shake');
+        
+        correctBtn.style.backgroundColor = '#10b981';
+        correctBtn.style.borderColor = '#10b981';
+        correctBtn.style.color = 'white';
+        
+        feedbackDiv.innerHTML = `
+            <div class="flex items-center gap-2 text-red-500 font-semibold p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+                <i data-lucide="x-circle" size="20"></i>
+                <span>❌ Sai rồi! Đáp án đúng là ${correctBtn.textContent.charAt(0)}</span>
+            </div>
+        `;
+        
+        if (wrongAudio) {
+            wrongAudio.currentTime = 0;
+            wrongAudio.play().catch(() => {});
+        }
+    }
+    
+    feedbackDiv.classList.remove('hidden');
+    lucide.createIcons();
+    
+    // Remove animation after a while
+    setTimeout(() => {
+        selectedBtn.classList.remove('animate-pulse', 'animate-shake');
+    }, 1000);
 }
 
 // ==========================================
@@ -5614,37 +5794,46 @@ async function generateFlashcards() {
     `;
     
     try {
-        const prompt = `Từ nội dung sau, hãy tạo 5-7 flashcard để ôn tập. Mỗi flashcard có:
-- Mặt trước (câu hỏi/khái niệm)
-- Mặt sau (câu trả lời/giải thích)
+        const prompt = `Từ nội dung sau, hãy tạo 5-7 flashcard để ôn tập. Trả về CHÍNH XÁC định dạng JSON sau:
 
-Format:
----
-[Mặt trước]
-Câu hỏi hoặc khái niệm
-
-[Mặt sau]
-Câu trả lời hoặc giải thích chi tiết
----
+{
+  "cards": [
+    {"front": "Câu hỏi 1", "back": "Câu trả lời 1"},
+    {"front": "Câu hỏi 2", "back": "Câu trả lời 2"}
+  ]
+}
 
 Nội dung: ${input}`;
         
-        const flashcards = await callGeminiAPI(prompt);
+        const response = await callGeminiAPI(prompt);
         
+        // Parse JSON response
+        let cardsData;
+        try {
+            const jsonMatch = response.match(/\{[\s\S]*\}/);
+            cardsData = JSON.parse(jsonMatch ? jsonMatch[0] : response);
+        } catch {
+            cardsData = { cards: [{ front: "Lỗi parse", back: response }] };
+        }
+        
+        const containerId = 'flashcard-result-cards';
         resultDiv.innerHTML = `
             <div class="${styles.cardBg} border border-purple-500/30 rounded-xl p-6">
                 <h4 class="font-bold text-purple-500 mb-3 flex items-center gap-2">
                     <i data-lucide="credit-card" size="20"></i>
-                    Flashcards ôn tập
+                    Flashcards ôn tập (Click để lật)
                 </h4>
-                <div class="whitespace-pre-wrap ${styles.textPrimary} text-sm leading-relaxed mb-4">${simpleMarkdown(flashcards)}</div>
-                <button onclick="copyToClipboard(\`${flashcards.replace(/`/g, '\\`')}\`)" class="px-4 py-2 rounded-lg ${styles.iconBg} hover:bg-purple-500/10 text-purple-500 text-sm font-bold transition-all flex items-center gap-2">
-                    <i data-lucide="copy" size="16"></i> Sao chép
-                </button>
+                <div id="${containerId}" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
             </div>
         `;
+        
+        const container = document.getElementById(containerId);
+        cardsData.cards.forEach((card, idx) => {
+            container.insertAdjacentHTML('beforeend', createFlashcardHTML(card.front, card.back, 'gen-' + idx));
+        });
+        
         lucide.createIcons();
-        showToast('Đã tạo flashcards!');
+        showToast('Đã tạo ' + cardsData.cards.length + ' flashcards!');
     } catch (error) {
         resultDiv.innerHTML = `
             <div class="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
