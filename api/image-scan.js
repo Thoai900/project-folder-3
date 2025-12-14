@@ -20,12 +20,13 @@ module.exports = async function handler(req, res) {
             return res.status(400).json({ error: 'Missing or invalid "mimeType" in request body.' });
         }
 
-        // Get API key from environment variables
-        const apiKey = process.env.GEMINI_API_KEY;
+        // Get API key from environment variables (prefer Gemini, fallback OpenAI)
+        const geminiKey = process.env.GEMINI_API_KEY;
+        const openaiKey = process.env.OPENAI_API_KEY;
         
-        if (!apiKey) {
-            console.error('GEMINI_API_KEY is not configured');
-            return res.status(500).json({ error: 'Server configuration error: API key not found.' });
+        if (!geminiKey && !openaiKey) {
+            console.error('No AI API key configured. Set GEMINI_API_KEY or OPENAI_API_KEY.');
+            return res.status(500).json({ error: 'Server configuration error: missing AI API key.' });
         }
 
         // Determine prompt based on action
@@ -39,56 +40,100 @@ module.exports = async function handler(req, res) {
             return res.status(400).json({ error: 'Invalid action. Use "scan" or "refine".' });
         }
 
-        // Construct Google Gemini API URL
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        if (geminiKey) {
+            // Construct Google Gemini API URL
+            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${geminiKey}`;
 
-        // Build payload based on action
-        let payload;
-        if (action === 'scan') {
-            payload = {
-                contents: [{
-                    parts: [
-                        { text: promptText },
-                        { 
-                            inline_data: { 
-                                mime_type: mimeType, 
-                                data: imageBase64 
-                            } 
-                        }
-                    ]
-                }]
-            };
-        } else {
-            // refine action doesn't need image
-            payload = {
-                contents: [{
-                    parts: [{ text: promptText }]
-                }]
-            };
+            // Build payload based on action
+            let payload;
+            if (action === 'scan') {
+                payload = {
+                    contents: [{
+                        parts: [
+                            { text: promptText },
+                            { 
+                                inline_data: { 
+                                    mime_type: mimeType, 
+                                    data: imageBase64 
+                                } 
+                            }
+                        ]
+                    }]
+                };
+            } else {
+                // refine action doesn't need image
+                payload = {
+                    contents: [{
+                        parts: [{ text: promptText }]
+                    }]
+                };
+            }
+
+            // Call Google Gemini API
+            const response = await fetch(geminiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                console.error('Gemini API Error:', data.error);
+                return res.status(response.status).json({ 
+                    error: data.error.message || 'Error from Gemini API'
+                });
+            }
+
+            return res.status(200).json({ ...data, provider: 'gemini' });
         }
 
-        // Call Google Gemini API
-        const response = await fetch(geminiUrl, {
+        // Fallback: OpenAI Vision (chat completions with image_url)
+        const openaiModel = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+        const oaResponse = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${openaiKey}`
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({
+                model: openaiModel,
+                messages: [
+                    {
+                        role: 'user',
+                        content: [
+                            { type: 'text', text: promptText },
+                            ...(action === 'scan' ? [{ type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } }] : [])
+                        ]
+                    }
+                ]
+            })
         });
 
-        // Parse response
-        const data = await response.json();
+        const oaData = await oaResponse.json();
 
-        // Check for errors from Gemini API
-        if (data.error) {
-            console.error('Gemini API Error:', data.error);
-            return res.status(response.status).json({ 
-                error: data.error.message || 'Error from Gemini API'
+        if (oaData.error) {
+            console.error('OpenAI API Error:', oaData.error);
+            return res.status(oaResponse.status).json({ 
+                error: oaData.error.message || 'Error from OpenAI API'
             });
         }
 
-        // Return successful response
-        return res.status(200).json(data);
+        const text = oaData.choices?.[0]?.message?.content || '';
+
+        return res.status(200).json({
+            provider: 'openai',
+            model: oaData.model || openaiModel,
+            candidates: [
+                {
+                    content: {
+                        parts: [ { text } ]
+                    }
+                }
+            ]
+        });
 
     } catch (error) {
         console.error('Server Error:', error);
