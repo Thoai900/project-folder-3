@@ -361,6 +361,30 @@ async function syncPromptToFirebase(prompt) {
     await window.firebaseSet(promptRef, safePrompt);
 }
 
+// Sync prompt to Firestore (collection 'prompts', doc id = prompt.id)
+async function syncPromptToFirestore(prompt) {
+    if (!window.db || !window.setDoc || !window.doc) return;
+    try {
+        const docRef = window.doc(window.db, 'prompts', String(prompt.id));
+        const safePrompt = {
+            id: prompt.id,
+            title: prompt.title || '',
+            description: prompt.description || '',
+            content: prompt.content || '',
+            category: prompt.category || 'Cá nhân',
+            tags: prompt.tags || [],
+            createdBy: prompt.createdBy || (state.currentUser ? state.currentUser.id : null),
+            createdAt: prompt.createdAt || new Date().toISOString(),
+            isShared: prompt.isShared ?? false,
+            sharedWith: prompt.sharedWith || [],
+            isTeacherFixed: prompt.isTeacherFixed ?? false
+        };
+        await window.setDoc(docRef, safePrompt, { merge: true });
+    } catch (e) {
+        console.error('❌ Lỗi sync prompt Firestore:', e);
+    }
+}
+
 // Delete prompt from Firebase
 async function deletePromptFromFirebase(promptId) {
     if (!window.firebaseDB) return;
@@ -2266,9 +2290,13 @@ function handleAddSubmit(e) {
         state.prompts.unshift(newPrompt);
         // Sync prompt hệ thống
         syncPromptToFirebase(newPrompt);
+        // Also save to Firestore
+        syncPromptToFirestore(newPrompt);
     } else {
         state.currentUser.customPrompts.push(newPrompt);
         state.prompts.unshift(newPrompt);
+        // Save personal prompt to Firestore as well
+        syncPromptToFirestore(newPrompt);
     }
 
     // Lưu user và state
@@ -5374,6 +5402,8 @@ function addPromptToSystem() {
     if (user.userType === 'teacher') {
         syncPromptToFirebase(newPrompt);
     }
+    // Luôn lưu Firestore để truy vấn thuận tiện
+    syncPromptToFirestore(newPrompt);
     syncUserToFirebase(user);
     
     showToast(`✓ ${user.userType === 'teacher' ? 'Prompt đã được thêm vào hệ thống!' : 'Prompt đã được lưu trong tài khoản của bạn!'}`);
