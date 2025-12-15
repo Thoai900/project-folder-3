@@ -3553,6 +3553,14 @@ function renderPromptCard(prompt) {
     const iconHTML = iconPath
         ? `<img src="${iconPath}" alt="${prompt.category}" class="w-full h-full object-contain drop-shadow-sm">`
         : `<i data-lucide="sparkles" class="text-yellow-500" size="20"></i>`;
+    const cardThumb = iconPath
+        ? `<div class="absolute inset-0 pointer-events-none overflow-hidden">
+                <div class="absolute -right-6 -bottom-10 w-40 opacity-25 group-hover:opacity-40 transition-opacity duration-300">
+                    <img src="${iconPath}" alt="thumb" class="w-full h-full object-contain drop-shadow-xl" />
+                </div>
+                <div class="absolute inset-0 bg-gradient-to-tr from-slate-900/40 via-transparent to-white/5 mix-blend-normal"></div>
+            </div>`
+        : '';
 
     const isFavorite = state.currentUser?.favorites?.includes(prompt.id) || false;
     const heartIcon = isFavorite 
@@ -3561,6 +3569,7 @@ function renderPromptCard(prompt) {
 
     return `
         <div class="group relative ${styles.glass} ${styles.glassHover} rounded-2xl p-6 flex flex-col h-full transition-all duration-300 overflow-hidden">
+            ${cardThumb}
             <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-[40px] group-hover:bg-indigo-500/20 transition-all"></div>
             <div class="flex justify-between items-start mb-5 relative z-10">
                 <div class="p-2.5 ${styles.iconBg} rounded-xl border ${styles.border} group-hover:scale-110 transition-transform duration-300 w-12 h-12 flex items-center justify-center overflow-hidden relative">
