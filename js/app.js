@@ -614,11 +614,14 @@ async function handleLearningFileUpload(event) {
             const fileExt = fileName.split('.').pop().toLowerCase();
             
             let extractedContent = '';
+            let filePreview = null; // Để lưu preview (base64 cho ảnh)
             
             // Process based on file type
             if (fileType.startsWith('image/')) {
                 // For images, use image-scan API (expects imageBase64, mimeType, action)
                 const base64 = await fileToBase64(file); // only the data part
+                filePreview = `data:${fileType};base64,${base64}`; // Lưu để hiển thị
+                
                 const idToken = await getFirebaseIdToken();
                 const headers = { 'Content-Type': 'application/json; charset=utf-8' };
                 if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
@@ -647,21 +650,25 @@ async function handleLearningFileUpload(event) {
                 extractedContent = data?.result || data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Không thể trích xuất nội dung từ ảnh';
                 
             } else if (fileType === 'application/pdf' || fileExt === 'pdf') {
-                // For PDF, read as text (basic extraction - limited)
-                extractedContent = `[PDF: ${fileName}]\n\nĐây là file PDF. Trình duyệt có giới hạn trong việc đọc PDF. Vui lòng copy-paste nội dung hoặc mô tả nội dung PDF này.`;
+                // For PDF
+                extractedContent = `**File PDF: ${fileName}**\n\n📄 Kích thước: ${(file.size / 1024).toFixed(2)} KB\n\nĐây là file PDF. Để xử lý nội dung:\n- Sử dụng công cụ bên phải để tóm tắt, tạo flashcard, câu hỏi\n- Hoặc mô tả nội dung PDF và gửi cho AI`;
                 
             } else if (fileType.includes('word') || fileExt === 'doc' || fileExt === 'docx') {
-                // For Word, limited support in browser
-                extractedContent = `[Word: ${fileName}]\n\nĐây là file Word. Trình duyệt không thể đọc trực tiếp file Word. Vui lòng copy-paste nội dung hoặc mô tả tài liệu này.`;
+                // For Word
+                extractedContent = `**File Word: ${fileName}**\n\n📝 Kích thước: ${(file.size / 1024).toFixed(2)} KB\n\nĐây là file Word. Để xử lý nội dung:\n- Sử dụng công cụ bên phải để tóm tắt, tạo flashcard, câu hỏi\n- Hoặc mô tả nội dung tài liệu và gửi cho AI`;
+                
+            } else if (fileType.includes('presentation') || fileExt === 'ppt' || fileExt === 'pptx') {
+                // For PowerPoint
+                extractedContent = `**File PowerPoint: ${fileName}**\n\n🎬 Kích thước: ${(file.size / 1024).toFixed(2)} KB\n\nĐây là file PowerPoint. Để xử lý nội dung:\n- Sử dụng công cụ bên phải để tóm tắt, tạo flashcard, câu hỏi\n- Hoặc mô tả nội dung bài thuyết trình và gửi cho AI`;
                 
             } else if (fileType.startsWith('video/')) {
-                // For video, we'll just save the file reference
-                extractedContent = `[Video: ${fileName}]\n\nĐây là file video. Vui lòng mô tả nội dung video để các công cụ có thể xử lý.`;
+                // For video
+                extractedContent = `**File Video: ${fileName}**\n\n🎥 Kích thước: ${(file.size / 1024 / 1024).toFixed(2)} MB\n\nĐây là file video. Vui lòng mô tả nội dung video để AI có thể hỗ trợ tốt hơn.`;
             } else if (fileType.startsWith('text/')) {
                 // Plain text files
                 extractedContent = await file.text();
             } else {
-                extractedContent = `[File: ${fileName}]\n\nKhông thể trích xuất nội dung tự động. Vui lòng mô tả nội dung file này.`;
+                extractedContent = `**File: ${fileName}**\n\n📦 Loại: ${fileType || 'Không xác định'}\n📊 Kích thước: ${(file.size / 1024).toFixed(2)} KB\n\nKhông thể trích xuất nội dung tự động. Vui lòng mô tả nội dung file này.`;
             }
             
             // Add to learning files
@@ -669,18 +676,32 @@ async function handleLearningFileUpload(event) {
                 name: fileName,
                 type: fileType,
                 size: file.size,
-                content: extractedContent
+                content: extractedContent,
+                preview: filePreview
             });
             
             // Thêm vào results để hiển thị
+            const fileIcon = fileType.startsWith('image/') ? '<i data-lucide="image" size="18" class="text-blue-500"></i>' :
+                            fileType.includes('pdf') ? '<i data-lucide="file-text" size="18" class="text-red-500"></i>' :
+                            fileType.includes('word') ? '<i data-lucide="file-text" size="18" class="text-blue-600"></i>' :
+                            fileType.includes('presentation') || fileExt === 'ppt' || fileExt === 'pptx' ? '<i data-lucide="presentation" size="18" class="text-orange-500"></i>' :
+                            '<i data-lucide="file" size="18" class="text-green-500"></i>';
+            
+            const fileColor = fileType.startsWith('image/') ? 'blue' :
+                             fileType.includes('pdf') ? 'red' :
+                             fileType.includes('word') ? 'blue' :
+                             fileType.includes('presentation') || fileExt === 'ppt' || fileExt === 'pptx' ? 'orange' :
+                             'green';
+            
             state.learningResults.push({
                 title: `📎 ${fileName}`,
                 content: extractedContent,
-                icon: fileType.startsWith('image/') ? '<i data-lucide="image" size="18" class="text-blue-500"></i>' : '<i data-lucide="file" size="18" class="text-green-500"></i>',
-                color: fileType.startsWith('image/') ? 'blue' : 'green',
+                icon: fileIcon,
+                color: fileColor,
                 timestamp: Date.now(),
                 fileName: fileName,
-                fileType: fileType
+                fileType: fileType,
+                filePreview: filePreview
             });
             
             // Append to context (để sử dụng cho các công cụ)
@@ -3608,9 +3629,9 @@ function renderLearningSpace() {
                         <div class="${styles.iconBg} border-2 border-dashed ${styles.border} rounded-xl p-4 text-center hover:border-blue-500/50 transition-all cursor-pointer" onclick="document.getElementById('learning-file-input').click()">
                             <i data-lucide="file-plus" size="28" class="${styles.textSecondary} mx-auto mb-2"></i>
                             <p class="text-sm ${styles.textPrimary} font-medium mb-1">Click để tải file</p>
-                            <p class="text-xs ${styles.textSecondary}">PDF, Word, Ảnh, Video</p>
+                            <p class="text-xs ${styles.textSecondary}">PDF, Word, PPT, Ảnh, Video</p>
                         </div>
-                        <input type="file" id="learning-file-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.mp4,.mov" class="hidden" onchange="handleLearningFileUpload(event)" multiple>
+                        <input type="file" id="learning-file-input" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.mp4,.mov" class="hidden" onchange="handleLearningFileUpload(event)" multiple>
                         
                         ${state.learningFiles && state.learningFiles.length > 0 ? `
                             <div class="mt-3 space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
@@ -3785,14 +3806,20 @@ function renderLearningResultsArea() {
                                 </button>
                             </div>
                         </div>
-                        ${result.fileType && result.fileType.startsWith('image/') ? `
-                            <div class="mb-4 rounded-xl overflow-hidden border ${styles.border}">
-                                <div class="bg-gradient-to-br from-${result.color}-500/5 to-purple-500/5 p-4 text-center">
-                                    <p class="text-xs ${styles.textSecondary} mb-2">Preview ảnh đã tải lên:</p>
-                                    <div class="inline-block max-w-full">
-                                        <div class="text-sm ${styles.textSecondary} italic">Ảnh: ${result.fileName}</div>
-                                    </div>
+                        ${result.filePreview ? `
+                            <div class="mb-4 rounded-xl overflow-hidden border ${styles.border} bg-gradient-to-br from-${result.color}-500/5 to-purple-500/5">
+                                <img src="${result.filePreview}" alt="${result.fileName}" class="w-full h-auto max-h-96 object-contain" />
+                                <div class="p-2 text-center border-t ${styles.border}">
+                                    <p class="text-xs ${styles.textSecondary}">📷 ${result.fileName}</p>
                                 </div>
+                            </div>
+                        ` : result.fileType && (result.fileType.includes('pdf') || result.fileType.includes('presentation') || result.fileType.includes('word')) ? `
+                            <div class="mb-4 rounded-xl overflow-hidden border ${styles.border} bg-gradient-to-br from-${result.color}-500/5 to-purple-500/5 p-6 text-center">
+                                <div class="w-20 h-20 mx-auto mb-4 rounded-2xl bg-${result.color}-500/10 flex items-center justify-center">
+                                    <i data-lucide="${result.fileType.includes('pdf') ? 'file-text' : result.fileType.includes('presentation') ? 'presentation' : 'file-text'}" size="40" class="text-${result.color}-500"></i>
+                                </div>
+                                <p class="text-sm font-bold ${styles.textPrimary} mb-1">${result.fileName}</p>
+                                <p class="text-xs ${styles.textSecondary}">Tài liệu học thuật</p>
                             </div>
                         ` : ''}
                         <div class="prose prose-sm max-w-none ${styles.textPrimary} leading-relaxed">
