@@ -3568,96 +3568,118 @@ function renderLearningSpace() {
     
     return `
         <div class="flex h-screen pt-16 pb-20 md:pb-0">
-            <!-- Left Side - Content & Results -->
-            <div class="flex-1 overflow-y-auto ${styles.bg}">
+            <!-- Left Side - Results Display Area -->
+            <div class="flex-1 overflow-y-auto ${styles.bg} custom-scrollbar">
                 <div class="h-full px-6 py-8">
-                    ${renderLearningMainContent()}
+                    ${renderLearningResultsArea()}
                 </div>
             </div>
             
-            <!-- Right Side - Tools Panel -->
-            <div class="w-96 ${styles.cardBg} border-l ${styles.border} overflow-y-auto">
+            <!-- Right Side - Chat, Upload & Tools Panel -->
+            <div class="w-[420px] ${styles.cardBg} border-l ${styles.border} overflow-y-auto custom-scrollbar">
                 <div class="p-6 space-y-6">
+                    <!-- Chat với AI -->
+                    <div>
+                        <h3 class="text-lg font-bold ${styles.textPrimary} mb-4 flex items-center gap-2">
+                            <i data-lucide="message-square" size="20" class="text-indigo-500"></i>
+                            Chat với AI
+                        </h3>
+                        <textarea 
+                            id="learning-prompt-input" 
+                            class="w-full h-32 ${styles.inputBg} border ${styles.border} rounded-xl p-4 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all resize-none text-sm"
+                            placeholder="Nhập câu hỏi hoặc nội dung cần học...&#10;&#10;VD: Giải thích định lý Pythagore"
+                        ></textarea>
+                        <div class="flex gap-2 mt-3">
+                            <button onclick="submitLearningPrompt()" class="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold transition-all flex items-center justify-center gap-2 text-sm">
+                                <i data-lucide="send" size="16"></i> Gửi
+                            </button>
+                            <button onclick="loadPromptTemplate()" class="px-4 py-2.5 rounded-lg ${styles.iconBg} border ${styles.border} hover:border-indigo-500/50 ${styles.textPrimary} font-bold transition-all text-sm" title="Chọn prompt mẫu">
+                                <i data-lucide="book-open" size="16"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
                     <!-- Upload Section -->
                     <div>
                         <h3 class="text-lg font-bold ${styles.textPrimary} mb-4 flex items-center gap-2">
-                            <i data-lucide="upload-cloud" size="20" class="text-indigo-500"></i>
+                            <i data-lucide="upload-cloud" size="20" class="text-blue-500"></i>
                             Tải tài liệu lên
                         </h3>
-                        <div class="${styles.iconBg} border-2 border-dashed ${styles.border} rounded-xl p-4 text-center hover:border-indigo-500/50 transition-all cursor-pointer" onclick="document.getElementById('learning-file-input').click()">
-                            <i data-lucide="file-plus" size="32" class="${styles.textSecondary} mx-auto mb-2"></i>
+                        <div class="${styles.iconBg} border-2 border-dashed ${styles.border} rounded-xl p-4 text-center hover:border-blue-500/50 transition-all cursor-pointer" onclick="document.getElementById('learning-file-input').click()">
+                            <i data-lucide="file-plus" size="28" class="${styles.textSecondary} mx-auto mb-2"></i>
                             <p class="text-sm ${styles.textPrimary} font-medium mb-1">Click để tải file</p>
                             <p class="text-xs ${styles.textSecondary}">PDF, Word, Ảnh, Video</p>
                         </div>
                         <input type="file" id="learning-file-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.mp4,.mov" class="hidden" onchange="handleLearningFileUpload(event)" multiple>
                         
                         ${state.learningFiles && state.learningFiles.length > 0 ? `
-                            <div class="mt-4 space-y-2">
+                            <div class="mt-3 space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
                                 ${state.learningFiles.map((file, idx) => `
-                                    <div class="${styles.inputBg} rounded-lg p-3 flex items-center gap-3">
-                                        <i data-lucide="file" size="16" class="${styles.textSecondary}"></i>
-                                        <span class="flex-1 text-sm ${styles.textPrimary} truncate">${file.name}</span>
-                                        <button onclick="removeLearningFile(${idx})" class="text-red-500 hover:bg-red-500/10 p-1 rounded">
-                                            <i data-lucide="x" size="16"></i>
-                                        </button>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : ''}
-                    </div>
-                    
-                    <!-- Context Status -->
-                    ${hasContext ? `
-                        <div class="bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-4">
-                            <div class="flex items-center gap-2 mb-2">
-                                <i data-lucide="check-circle" size="18" class="text-indigo-500"></i>
-                                <p class="font-bold text-indigo-500 text-sm">Đã có nội dung</p>
-                            </div>
-                            <p class="text-xs ${styles.textSecondary}">Các công cụ bên dưới sẽ sử dụng nội dung này</p>
-                        </div>
-                    ` : ''}
-                    
-                    <!-- Quick Actions -->
+                                    <div class="${styles.inputBg} rounded-lg p-2 flex items-center gap-2 text-xs">
+                                        <i data-lucide="file" size="14" class="${styles.textSecondary}"></i>
+                         Công cụ học tập -->
                     <div>
                         <h3 class="text-lg font-bold ${styles.textPrimary} mb-4 flex items-center gap-2">
                             <i data-lucide="zap" size="20" class="text-yellow-500"></i>
                             Công cụ học tập
                         </h3>
                         
-                        <div class="space-y-3">
-                            <button onclick="processLearningAction('summary')" class="w-full ${styles.cardBg} border ${styles.border} rounded-xl p-4 hover:border-blue-500/50 hover:shadow-lg transition-all text-left group ${!hasContext ? 'opacity-50 cursor-not-allowed' : ''}" ${!hasContext ? 'disabled' : ''}>
-                                <div class="flex items-center gap-3 mb-2">
-                                    <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                        <i data-lucide="file-text" size="20" class="text-blue-500"></i>
+                        <div class="space-y-2">
+                            <button onclick="processLearningAction('summary')" class="w-full ${styles.cardBg} border ${styles.border} rounded-lg p-3 hover:border-blue-500/50 transition-all text-left group ${!hasContext ? 'opacity-50 cursor-not-allowed' : ''}" ${!hasContext ? 'disabled' : ''}>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <i data-lucide="file-text" size="18" class="text-blue-500"></i>
                                     </div>
-                                    <div class="flex-1">
-                                        <p class="font-bold ${styles.textPrimary}">Tóm tắt</p>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-bold ${styles.textPrimary} text-sm">Tóm tắt</p>
+                                        <p class="text-xs ${styles.textSecondary} truncate">Trích xuất ý chính</p>
                                     </div>
                                 </div>
-                                <p class="text-xs ${styles.textSecondary}">Trích xuất ý chính từ nội dung</p>
                             </button>
                             
-                            <button onclick="processLearningAction('flashcards')" class="w-full ${styles.cardBg} border ${styles.border} rounded-xl p-4 hover:border-purple-500/50 hover:shadow-lg transition-all text-left group ${!hasContext ? 'opacity-50 cursor-not-allowed' : ''}" ${!hasContext ? 'disabled' : ''}>
-                                <div class="flex items-center gap-3 mb-2">
-                                    <div class="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                        <i data-lucide="credit-card" size="20" class="text-purple-500"></i>
+                            <button onclick="processLearningAction('flashcards')" class="w-full ${styles.cardBg} border ${styles.border} rounded-lg p-3 hover:border-purple-500/50 transition-all text-left group ${!hasContext ? 'opacity-50 cursor-not-allowed' : ''}" ${!hasContext ? 'disabled' : ''}>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <i data-lucide="credit-card" size="18" class="text-purple-500"></i>
                                     </div>
-                                    <div class="flex-1">
-                                        <p class="font-bold ${styles.textPrimary}">Flashcards</p>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-bold ${styles.textPrimary} text-sm">Flashcards</p>
+                                        <p class="text-xs ${styles.textSecondary} truncate">Thẻ ghi nhớ</p>
                                     </div>
                                 </div>
-                                <p class="text-xs ${styles.textSecondary}">Tạo thẻ ghi nhớ hai mặt</p>
                             </button>
                             
-                            <button onclick="processLearningAction('quiz')" class="w-full ${styles.cardBg} border ${styles.border} rounded-xl p-4 hover:border-green-500/50 hover:shadow-lg transition-all text-left group ${!hasContext ? 'opacity-50 cursor-not-allowed' : ''}" ${!hasContext ? 'disabled' : ''}>
-                                <div class="flex items-center gap-3 mb-2">
-                                    <div class="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                        <i data-lucide="help-circle" size="20" class="text-green-500"></i>
+                            <button onclick="processLearningAction('quiz')" class="w-full ${styles.cardBg} border ${styles.border} rounded-lg p-3 hover:border-green-500/50 transition-all text-left group ${!hasContext ? 'opacity-50 cursor-not-allowed' : ''}" ${!hasContext ? 'disabled' : ''}>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-lg bg-green-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <i data-lucide="help-circle" size="18" class="text-green-500"></i>
                                     </div>
-                                    <div class="flex-1">
-                                        <p class="font-bold ${styles.textPrimary}">Câu hỏi</p>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-bold ${styles.textPrimary} text-sm">Câu hỏi</p>
+                                        <p class="text-xs ${styles.textSecondary} truncate">Tạo bài kiểm tra</p>
                                     </div>
                                 </div>
+                            </button>
+                            
+                            <button onclick="processLearningAction('explain')" class="w-full ${styles.cardBg} border ${styles.border} rounded-lg p-3 hover:border-orange-500/50 transition-all text-left group ${!hasContext ? 'opacity-50 cursor-not-allowed' : ''}" ${!hasContext ? 'disabled' : ''}>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-lg bg-orange-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <i data-lucide="lightbulb" size="18" class="text-orange-500"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-bold ${styles.textPrimary} text-sm">Giải thích</p>
+                                        <p class="text-xs ${styles.textSecondary} truncate">Chi tiết khái niệm</p>
+                                    </div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Clear button -->
+                    <button onclick="clearLearningContext()" class="w-full ${styles.inputBg} border ${styles.border} rounded-lg p-2.5 hover:border-red-500/50 transition-all text-center text-sm font-medium ${styles.textSecondary} hover:text-red-500">
+                        <i data-lucide="trash-2" size="14" class="inline mr-2"></i>
+                        Xóa tất cả
+                    </button       </div>
                                 <p class="text-xs ${styles.textSecondary}">Tạo câu hỏi kiểm tra</p>
                             </button>
                             
@@ -3685,7 +3707,7 @@ function renderLearningSpace() {
     `;
 }
 
-function renderLearningMainContent() {
+function renderLearningResultsArea() {
     const styles = getStyles();
     
     return `
@@ -3693,72 +3715,20 @@ function renderLearningMainContent() {
             <!-- Header -->
             <div class="mb-6">
                 <h1 class="text-4xl font-black ${styles.textPrimary} mb-2">📚 Không gian học tập</h1>
-                <p class="${styles.textSecondary}">Sử dụng prompt hoặc tải tài liệu lên, sau đó áp dụng các công cụ bên phải</p>
+                <p class="${styles.textSecondary}">Kết quả từ prompt, file và công cụ học tập sẽ hiển thị ở đây</p>
             </div>
 
-            <!-- Session Save/Load Bar -->
-            <div class="mb-4 flex flex-wrap items-center gap-3 ${styles.cardBg} border ${styles.border} rounded-xl p-4">
-                <input id="learning-session-title" type="text" placeholder="Đặt tên phiên học..." class="flex-1 min-w-[220px] ${styles.inputBg} border ${styles.border} rounded-lg px-3 py-2 ${styles.textPrimary} text-sm outline-none focus:border-indigo-500" />
-                <button onclick="saveLearningSession()" class="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold shadow-md hover:from-indigo-500 hover:to-purple-500 flex items-center gap-2">
-                    <i data-lucide="save" size="16"></i> Lưu phiên
+            <!-- Session Management Bar -->
+            <div class="mb-4 flex flex-wrap items-center gap-2 ${styles.cardBg} border ${styles.border} rounded-xl p-3">
+                <input id="learning-session-title" type="text" placeholder="Tên phiên học..." class="flex-1 min-w-[180px] ${styles.inputBg} border ${styles.border} rounded-lg px-3 py-2 ${styles.textPrimary} text-sm outline-none focus:border-indigo-500" />
+                <button onclick="saveLearningSession()" class="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold text-sm hover:from-indigo-500 hover:to-purple-500 flex items-center gap-2">
+                    <i data-lucide="save" size="14"></i> Lưu
                 </button>
-                <button onclick="loadUserLearningSessions()" class="px-3 py-2 rounded-lg ${styles.iconBg} border ${styles.border} ${styles.textPrimary} hover:border-indigo-500 flex items-center gap-2">
-                    <i data-lucide="refresh-ccw" size="16"></i> Tải phiên đã lưu
-                </button>
-                <button onclick="copyLearningSessionLink(state.activeLearningSessionId)" class="px-3 py-2 rounded-lg ${styles.iconBg} border ${styles.border} ${styles.textPrimary} hover:border-indigo-500 flex items-center gap-2 ${!state.activeLearningSessionId ? 'opacity-50 cursor-not-allowed' : ''}" ${!state.activeLearningSessionId ? 'disabled' : ''}>
-                    <i data-lucide="link" size="16"></i> Link chia sẻ
+                <button onclick="loadUserLearningSessions()" class="px-3 py-2 rounded-lg ${styles.iconBg} border ${styles.border} ${styles.textPrimary} hover:border-indigo-500 text-sm flex items-center gap-2">
+                    <i data-lucide="folder-open" size="14"></i> Mở
                 </button>
             </div>
 
-            <!-- Saved Sessions List -->
-            <div class="mb-6 ${styles.cardBg} border ${styles.border} rounded-xl p-4">
-                <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="bookmark" size="16" class="text-indigo-500"></i>
-                        <h3 class="font-bold ${styles.textPrimary}">Phiên đã lưu</h3>
-                    </div>
-                    ${state.activeLearningSessionId ? `<span class="text-xs ${styles.textSecondary}">Đang mở: ${state.activeLearningSessionId}</span>` : ''}
-                </div>
-                ${!state.currentUser ? `
-                    <p class="text-sm ${styles.textSecondary}">Đăng nhập để lưu và mở lại phiên học.</p>
-                ` : (state.learningSessions.length === 0 ? `
-                    <p class="text-sm ${styles.textSecondary}">Chưa có phiên nào. Lưu phiên đầu tiên để tiếp tục sau.</p>
-                ` : `
-                    <div class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
-                        ${state.learningSessions.map(sess => `
-                            <div class="flex items-center gap-3 ${styles.inputBg} border ${styles.border} rounded-lg px-3 py-2">
-                                <div class="min-w-0 flex-1">
-                                    <p class="text-sm font-semibold ${styles.textPrimary} truncate">${sess.title || 'Phiên học'}</p>
-                                    <p class="text-[11px] ${styles.textSecondary}">Cập nhật: ${new Date(sess.updatedAt || sess.createdAt).toLocaleString('vi-VN')}</p>
-                                </div>
-                                <button onclick="openLearningSession('${sess.id}')" class="px-3 py-1 rounded-md bg-emerald-500/10 text-emerald-600 text-xs font-semibold hover:bg-emerald-500/20">Mở</button>
-                                <button onclick="copyLearningSessionLink('${sess.id}')" class="p-2 rounded-md ${styles.iconBg} border ${styles.border} ${styles.textSecondary} hover:${styles.textPrimary}" title="Copy link">
-                                    <i data-lucide="link" size="14"></i>
-                                </button>
-                            </div>
-                        `).join('')}
-                    </div>
-                `)}
-            </div>
-            
-            <!-- Prompt Input Area -->
-            <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6 mb-6">
-                <label class="block text-sm font-bold ${styles.textPrimary} mb-3">Nhập nội dung hoặc đặt câu hỏi</label>
-                <textarea 
-                    id="learning-prompt-input" 
-                    class="w-full h-40 ${styles.inputBg} border ${styles.border} rounded-xl p-4 ${styles.textPrimary} outline-none focus:border-indigo-500 transition-all resize-none"
-                    placeholder="Nhập bài học, kiến thức cần học, hoặc đặt câu hỏi...&#10;&#10;Ví dụ: Giải thích định lý Pythagore, Tóm tắt lịch sử Việt Nam thế kỷ 20..."
-                ></textarea>
-                <div class="flex gap-3 mt-4">
-                    <button onclick="submitLearningPrompt()" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold transition-all flex items-center justify-center gap-2">
-                        <i data-lucide="send" size="20"></i> Gửi và xử lý
-                    </button>
-                    <button onclick="loadPromptTemplate()" class="px-6 py-3 rounded-xl ${styles.iconBg} border ${styles.border} hover:border-indigo-500/50 ${styles.textPrimary} font-bold transition-all flex items-center gap-2">
-                        <i data-lucide="book-open" size="20"></i> Chọn prompt mẫu
-                    </button>
-                </div>
-            </div>
-            
             <!-- Results Area - Scrollable -->
             <div class="flex-1 overflow-y-auto custom-scrollbar space-y-4">
                 ${state.isLoadingPrompts ? `
