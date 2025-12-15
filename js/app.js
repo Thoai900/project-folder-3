@@ -1113,6 +1113,19 @@ function simpleMarkdown(text) {
         return `__CODEBLOCK_${codeBlocks.length - 1}__`;
     });
 
+    // Chuẩn hóa ký tự escape của AI (\$ -> $) để KaTeX nhận diện được
+    cleanText = cleanText.replace(/\\\$/g, '$');
+
+    // Hỗ trợ các delimiter LaTeX dạng \(...\) và \[...\]
+    cleanText = cleanText.replace(/\\\[([\s\S]*?)\\\]/g, (match, content) => {
+        const idx = mathBlocks.push({ type: 'block', content: content.trim() }) - 1;
+        return `__MATHBLOCK_${idx}__`;
+    });
+    cleanText = cleanText.replace(/\\\(([\s\S]*?)\\\)/g, (match, content) => {
+        const idx = mathBlocks.push({ type: 'inline', content: content.trim() }) - 1;
+        return `__MATHINLINE_${idx}__`;
+    });
+
     // Extract LaTeX BEFORE escaping HTML
     // Block math $$...$$
     cleanText = cleanText.replace(/\$\$([\s\S]*?)\$\$/g, (match, content) => {
