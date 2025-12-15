@@ -3032,7 +3032,19 @@ function renderLibrary() {
 
             ${state.isLoadingPrompts
                 ? renderSkeletonLoader(6)
-                : renderBentoHomepageGrid(filteredPrompts)}
+                : (filteredPrompts.length > 0
+                    ? `
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            ${filteredPrompts.map(p => renderPromptCard(p)).join('')}
+                        </div>
+                    `
+                    : `
+                        <div class="text-center py-32 opacity-50">
+                            <i data-lucide="${state.activeCategory === 'Cá nhân' ? 'heart-off' : 'search'}" class="w-16 h-16 mx-auto mb-4 text-slate-500"></i>
+                            <h3 class="text-xl font-medium">${state.activeCategory === 'Cá nhân' ? 'Bạn chưa lưu prompt nào vào yêu thích' : 'Không tìm thấy kết quả nào'}</h3>
+                        </div>
+                    `
+                )}
         </main>
     `;
 }
@@ -3553,14 +3565,6 @@ function renderPromptCard(prompt) {
     const iconHTML = iconPath
         ? `<img src="${iconPath}" alt="${prompt.category}" class="w-full h-full object-contain drop-shadow-sm">`
         : `<i data-lucide="sparkles" class="text-yellow-500" size="20"></i>`;
-    const cardThumb = iconPath
-        ? `<div class="absolute inset-0 pointer-events-none overflow-hidden">
-                <div class="absolute -right-6 -bottom-10 w-40 opacity-25 group-hover:opacity-40 transition-opacity duration-300">
-                    <img src="${iconPath}" alt="thumb" class="w-full h-full object-contain drop-shadow-xl" />
-                </div>
-                <div class="absolute inset-0 bg-gradient-to-tr from-slate-900/40 via-transparent to-white/5 mix-blend-normal"></div>
-            </div>`
-        : '';
 
     const isFavorite = state.currentUser?.favorites?.includes(prompt.id) || false;
     const heartIcon = isFavorite 
@@ -3569,7 +3573,6 @@ function renderPromptCard(prompt) {
 
     return `
         <div class="group relative ${styles.glass} ${styles.glassHover} rounded-2xl p-6 flex flex-col h-full transition-all duration-300 overflow-hidden">
-            ${cardThumb}
             <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-[40px] group-hover:bg-indigo-500/20 transition-all"></div>
             <div class="flex justify-between items-start mb-5 relative z-10">
                 <div class="p-2.5 ${styles.iconBg} rounded-xl border ${styles.border} group-hover:scale-110 transition-transform duration-300 w-12 h-12 flex items-center justify-center overflow-hidden relative">
@@ -3642,94 +3645,6 @@ function renderSkeletonLoader(count = 6) {
                 </div>
             `).join('')}
         </div>
-    `;
-}
-
-// ==========================================
-// Bento Grid for Homepage (Feature-first)
-// ==========================================
-function renderBentoHomepageGrid(prompts) {
-    const styles = getStyles();
-    const user = state.currentUser;
-    const streak = state.streak || 0;
-    const favCount = user?.favorites?.length || 0;
-    const highlight = prompts[0] || MASTER_PROMPTS[0];
-
-    const highlightImg = (() => {
-        // Try subject icon or category icon if available
-        if (!highlight) return '';
-        const subjectTag = (highlight.tags || []).find(tag => SUBJECT_ICONS[tag]);
-        const iconPath = subjectTag ? SUBJECT_ICONS[subjectTag] : (CATEGORY_ICONS[highlight.category] || '');
-        return iconPath ? `<img src="${iconPath}" class="absolute -right-8 -bottom-8 w-40 opacity-40 group-hover:scale-110 transition-transform"/>` : '';
-    })();
-
-    return `
-        <section class="grid grid-cols-1 md:grid-cols-4 auto-rows-[minmax(120px,_auto)] gap-4 p-1">
-            <!-- Highlight Prompt of the Day -->
-            <div class="md:col-span-2 md:row-span-2 relative overflow-hidden group ${styles.cardBg} ${styles.glass} border ${styles.border} rounded-2xl p-6">
-                <div class="mb-2 flex items-center gap-2">
-                    <span class="text-xs px-2 py-0.5 rounded-full ${styles.iconBg} border ${styles.border} ${styles.textSecondary}">Prompt của ngày</span>
-                </div>
-                <h3 class="text-2xl md:text-3xl font-black ${styles.textPrimary} mb-2 line-clamp-2">${highlight ? highlight.title : 'Khám phá Prompt hay nhất hôm nay 🌟'}</h3>
-                <p class="${styles.textSecondary} mb-8 line-clamp-3">${highlight?.description || 'Gợi ý thông minh, giải quyết nhanh bài toán của bạn.'}</p>
-                <div class="flex items-center gap-2">
-                    ${highlight ? `<button onclick="switchToChatMode(${highlight.id})" class="btn-core btn-primary px-5 py-2 text-white font-bold">Thử ngay</button>` : ''}
-                    <button onclick="openModal('add')" class="btn-core btn-glass px-4 py-2 ${styles.textPrimary}">Tạo prompt</button>
-                </div>
-                ${highlightImg}
-            </div>
-
-            <!-- Streak card -->
-            <div class="flex flex-col items-center justify-center ${styles.cardBg} ${styles.glass} border ${styles.border} rounded-2xl p-5">
-                <span class="text-4xl font-black ${getColorClass('text')}">${streak}</span>
-                <span class="text-xs ${styles.textSecondary}">Streak ngày</span>
-            </div>
-
-            <!-- OCR quick -->
-            <div class="${styles.cardBg} ${styles.glass} border ${styles.border} rounded-2xl p-5 hover:bg-white/5 transition-colors cursor-pointer" onclick="openModal('scan')">
-                <div class="flex items-center gap-3 mb-2">
-                    <i data-lucide="scan" size="22" class="text-indigo-500"></i>
-                    <p class="font-bold ${styles.textPrimary}">Scan OCR</p>
-                </div>
-                <p class="text-xs ${styles.textSecondary}">Chuyển ảnh thành văn bản để xử lý.</p>
-            </div>
-
-            <!-- Learning Space -->
-            <div class="${styles.cardBg} ${styles.glass} border ${styles.border} rounded-2xl p-5 flex flex-col justify-between">
-                <div>
-                    <div class="flex items-center gap-3 mb-2">
-                        <i data-lucide="book-open" size="22" class="text-emerald-500"></i>
-                        <p class="font-bold ${styles.textPrimary}">Không gian học tập</p>
-                    </div>
-                    <p class="text-xs ${styles.textSecondary}">Tóm tắt, Flashcards, Quiz, Giải thích.</p>
-                </div>
-                <div class="mt-3"><button onclick="switchView('learning')" class="text-xs px-3 py-1.5 rounded-full ${getColorClass('soft-bg')} ${getColorClass('soft-hover')} ${getColorClass('text')}">Mở ngay</button></div>
-            </div>
-
-            <!-- Favorites -->
-            <div class="${styles.cardBg} ${styles.glass} border ${styles.border} rounded-2xl p-5 flex flex-col items-center justify-center">
-                <i data-lucide="heart" size="20" class="text-red-400 mb-1"></i>
-                <span class="text-xl font-extrabold ${styles.textPrimary}">${favCount}</span>
-                <span class="text-[11px] ${styles.textSecondary}">Yêu thích</span>
-            </div>
-
-            <!-- Quick Add -->
-            <div class="${styles.cardBg} ${styles.glass} border ${styles.border} rounded-2xl p-5 hover:bg-white/5 transition-colors cursor-pointer" onclick="openModal('add')">
-                <div class="flex items-center gap-3 mb-2">
-                    <i data-lucide="plus-circle" size="22" class="text-purple-500"></i>
-                    <p class="font-bold ${styles.textPrimary}">Tạo prompt mới</p>
-                </div>
-                <p class="text-xs ${styles.textSecondary}">Lưu và chia sẻ với bạn bè.</p>
-            </div>
-
-            <!-- Recent suggestions (small list) -->
-            ${prompts.slice(0,4).map(p => `
-                <div class="${styles.cardBg} ${styles.glass} border ${styles.border} rounded-2xl p-4 hover:border-indigo-500/40 transition cursor-pointer" onclick="switchToChatMode(${p.id})">
-                    <p class="text-sm font-bold ${styles.textPrimary} line-clamp-2 mb-1">${p.title}</p>
-                    <p class="text-xs ${styles.textSecondary} line-clamp-2">${p.description}</p>
-                </div>
-            `).join('')}
-        </section>
     `;
 }
 
