@@ -1230,6 +1230,20 @@ function simpleMarkdown(text) {
     return `<div class="markdown-body leading-7 text-sm space-y-3 w-full whitespace-pre-wrap ${state.theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}">${html}</div>`;
 }
 
+// Giữ phần trả lời gọn, tránh rơi thêm đoạn dài không cần thiết
+function cleanAIResponse(text) {
+    if (!text) return '';
+    // Tách theo đoạn trống, giữ tối đa 2 đoạn đầu tiên
+    const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim());
+    let trimmed = paragraphs.slice(0, 2).join('\n\n');
+    // Giới hạn chiều dài để tránh hiển thị phần dư
+    const MAX_LEN = 1200;
+    if (trimmed.length > MAX_LEN) {
+        trimmed = trimmed.slice(0, MAX_LEN);
+    }
+    return trimmed;
+}
+
 // ==========================================
 // 3. LOGIC FUNCTIONS
 // ==========================================
@@ -2366,7 +2380,8 @@ async function runPrompt() {
         const data = await response.json();
         if (data.error) throw new Error(data.error.message || data.error || 'API Error');
 
-        const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Không có phản hồi từ AI.';
+        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Không có phản hồi từ AI.';
+        const responseText = cleanAIResponse(rawText);
         const provider = data.provider || 'gemini';
 
         document.getElementById(loadingId).remove();
