@@ -516,7 +516,7 @@ async function callGeminiAPI(prompt, useUserKey = false) {
     const url = '/api/gemini';
     const idToken = await getFirebaseIdToken();
 
-    const headers = { 'Content-Type': 'application/json' };
+    const headers = { 'Content-Type': 'application/json; charset=utf-8' };
     if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
 
     const body = { prompt };
@@ -620,7 +620,7 @@ async function handleLearningFileUpload(event) {
                 // For images, use image-scan API (expects imageBase64, mimeType, action)
                 const base64 = await fileToBase64(file); // only the data part
                 const idToken = await getFirebaseIdToken();
-                const headers = { 'Content-Type': 'application/json' };
+                const headers = { 'Content-Type': 'application/json; charset=utf-8' };
                 if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
 
                 const body = {
@@ -1670,7 +1670,7 @@ async function handleImageScan() {
         const url = '/api/image-scan';
         const idToken = await getFirebaseIdToken();
         
-        const headers = { 'Content-Type': 'application/json' };
+        const headers = { 'Content-Type': 'application/json; charset=utf-8' };
         if (idToken) {
             headers['Authorization'] = `Bearer ${idToken}`;
         }
@@ -1721,7 +1721,7 @@ async function refineScannedText() {
         const url = '/api/image-scan';
         const idToken = await getFirebaseIdToken();
         
-        const headers = { 'Content-Type': 'application/json' };
+        const headers = { 'Content-Type': 'application/json; charset=utf-8' };
         if (idToken) {
             headers['Authorization'] = `Bearer ${idToken}`;
         }
@@ -1764,7 +1764,7 @@ async function analyzeScannedText(currentText) {
     const styles = getStyles();
     const url = '/api/image-scan';
     const idToken = await getFirebaseIdToken();
-    const headers = { 'Content-Type': 'application/json' };
+    const headers = { 'Content-Type': 'application/json; charset=utf-8' };
     if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
 
     try {
@@ -1950,7 +1950,7 @@ async function generateSmartPrompt() {
         const url = '/api/smart-generate';
         const idToken = await getFirebaseIdToken();
         
-        const headers = { 'Content-Type': 'application/json' };
+        const headers = { 'Content-Type': 'application/json; charset=utf-8' };
         if (idToken) {
             headers['Authorization'] = `Bearer ${idToken}`;
         }
@@ -2340,7 +2340,7 @@ async function runPrompt() {
         ProgressBar.start();
         const url = '/api/gemini';
         const idToken = await getFirebaseIdToken();
-        const headers = { 'Content-Type': 'application/json' };
+        const headers = { 'Content-Type': 'application/json; charset=utf-8' };
         if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
 
         const response = await fetch(url, {
@@ -5825,7 +5825,7 @@ async function handleLearningImageUpload(event) {
             const url = '/api/image-scan';
             const idToken = await getFirebaseIdToken();
             
-            const headers = { 'Content-Type': 'application/json' };
+            const headers = { 'Content-Type': 'application/json; charset=utf-8' };
             if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
             
             const body = { 

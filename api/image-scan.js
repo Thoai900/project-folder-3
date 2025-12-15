@@ -2,6 +2,9 @@
 // Extracts text from images using Google Gemini Vision API
 
 module.exports = async function handler(req, res) {
+    // Set UTF-8 charset for all responses
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    
     // Only allow POST requests
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed. Use POST.' });

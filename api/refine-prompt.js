@@ -10,6 +10,9 @@ function sanitizeText(text = '') {
 }
 
 module.exports = async function handler(req, res) {
+    // Set UTF-8 charset for all responses
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    
     // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');

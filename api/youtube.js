@@ -5,6 +5,9 @@
 const { YoutubeTranscript } = require('youtube-transcript');
 
 module.exports = async function handler(req, res) {
+    // Set UTF-8 charset for all responses
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    
     if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
 
     const { url } = req.body || {};
