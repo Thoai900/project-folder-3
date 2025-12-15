@@ -1112,21 +1112,22 @@ function simpleMarkdown(text) {
         codeBlocks.push(content);
         return `__CODEBLOCK_${codeBlocks.length - 1}__`;
     });
-    
-    cleanText = escapeHtml(cleanText);
 
-    // Detect block math $$...$$ and inline math $...$ (avoid code blocks already extracted)
-    // Store math content to render later with KaTeX
-    // Block math
+    // Extract LaTeX BEFORE escaping HTML
+    // Block math $$...$$
     cleanText = cleanText.replace(/\$\$([\s\S]*?)\$\$/g, (match, content) => {
         const idx = mathBlocks.push({ type: 'block', content: content.trim() }) - 1;
         return `__MATHBLOCK_${idx}__`;
     });
-    // Inline math (single-line, avoid matching escaped \$)
-    cleanText = cleanText.replace(/(^|[^\\])\$([^$\n]+)\$/g, (match, prefix, content) => {
+    
+    // Inline math $...$
+    cleanText = cleanText.replace(/\$([^\$\n]+)\$/g, (match, content) => {
         const idx = mathBlocks.push({ type: 'inline', content: content.trim() }) - 1;
-        return `${prefix}__MATHINLINE_${idx}__`;
+        return `__MATHINLINE_${idx}__`;
     });
+    
+    // NOW escape HTML after extracting LaTeX
+    cleanText = escapeHtml(cleanText);
     
     // Xử lý Markdown formatting
     let html = cleanText
@@ -1204,13 +1205,13 @@ function simpleMarkdown(text) {
     html = html.replace(/__MATHBLOCK_(\d+)__/g, (match, index) => {
         const m = mathBlocks[Number(index)];
         const styles = getStyles();
-        const safe = m.content;
-        return `<div class="my-3 p-3 rounded-lg ${state.theme === 'dark' ? 'bg-slate-800/50' : 'bg-slate-50'} border ${styles.border}"><span class="math-block">${safe}</span></div>`;
+        // Include delimiters for KaTeX to recognize
+        return `<div class="my-3 p-3 rounded-lg ${state.theme === 'dark' ? 'bg-slate-800/50' : 'bg-slate-50'} border ${styles.border}">$$${m.content}$$</div>`;
     });
     html = html.replace(/__MATHINLINE_(\d+)__/g, (match, index) => {
         const m = mathBlocks[Number(index)];
-        const safe = m.content;
-        return `<span class="math-inline">${safe}</span>`;
+        // Include delimiters for KaTeX to recognize
+        return `$${m.content}$`;
     });
     
     return `<div class="markdown-body leading-7 text-sm space-y-3 w-full whitespace-pre-wrap ${state.theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}">${html}</div>`;
