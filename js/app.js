@@ -3617,7 +3617,17 @@ function renderLearningSpace() {
                                 ${state.learningFiles.map((file, idx) => `
                                     <div class="${styles.inputBg} rounded-lg p-2 flex items-center gap-2 text-xs">
                                         <i data-lucide="file" size="14" class="${styles.textSecondary}"></i>
-                         Công cụ học tập -->
+                                        <span class="flex-1 ${styles.textPrimary} truncate">${file.name}</span>
+                                        <button onclick="removeLearningFile(${idx})" class="text-red-500 hover:bg-red-500/10 p-1 rounded">
+                                            <i data-lucide="x" size="12"></i>
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <!-- Công cụ học tập -->
                     <div>
                         <h3 class="text-lg font-bold ${styles.textPrimary} mb-4 flex items-center gap-2">
                             <i data-lucide="zap" size="20" class="text-yellow-500"></i>
@@ -3819,7 +3829,7 @@ function renderLearningResultsArea() {
                             <div class="flex flex-col gap-3 items-center">
                                 <div class="flex items-center gap-2 text-sm ${styles.textSecondary}">
                                     <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
-                                    <span>Nhập prompt hoặc câu hỏi phía trên</span>
+                                    <span>Chat với AI bên phải</span>
                                 </div>
                                 <div class="flex items-center gap-2 text-sm ${styles.textSecondary}">
                                     <span class="w-2 h-2 rounded-full bg-purple-500"></span>
