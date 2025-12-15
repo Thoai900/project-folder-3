@@ -2281,7 +2281,11 @@ function handleAddSubmit(e) {
         category: formData.get('category'),
         description: formData.get('description'),
         content: formData.get('content'),
-        tags: ["New", "User"]
+        tags: ["New", "User"],
+        createdBy: state.currentUser?.id || null,
+        createdAt: new Date().toISOString(),
+        isShared: false,
+        sharedWith: []
     };
     // Phân quyền lưu prompt
     if (state.currentUser.userType === 'teacher') {
