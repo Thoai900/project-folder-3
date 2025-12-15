@@ -21,6 +21,7 @@
         import { getDatabase, ref, set, get, push, onValue, update, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, signInAnonymously, signInWithPhoneNumber, RecaptchaVerifier, sendSignInLinkToEmail, signInWithEmailLink, isSignInWithEmailLink, connectAuthEmulator, signInWithPopup, GoogleAuthProvider, sendEmailVerification } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getStorage, ref as storageRef, uploadBytes, uploadBytesResumable, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
         
         const firebaseConfig = {
             apiKey: "AIzaSyA5JfpN7Sk3tdCBDa7u5coDbjrwx7D2GV8",
@@ -37,6 +38,7 @@
         const database = getDatabase(app);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const storage = getStorage(app);
         
         // Export to window for use in app.js
         window.firebaseDB = database;
@@ -47,6 +49,14 @@
         window.firebaseOnValue = onValue;
         window.firebaseUpdate = update;
         window.firebaseRemove = remove;
+        
+        // Firebase Storage exports
+        window.firebaseStorage = storage;
+        window.firebaseStorageRef = storageRef;
+        window.firebaseUploadBytes = uploadBytes;
+        window.firebaseUploadBytesResumable = uploadBytesResumable;
+        window.firebaseGetDownloadURL = getDownloadURL;
+        window.firebaseDeleteObject = deleteObject;
 
         // Firestore exports
         window.db = db;

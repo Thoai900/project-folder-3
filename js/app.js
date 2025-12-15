@@ -614,13 +614,42 @@ async function handleLearningFileUpload(event) {
             const fileExt = fileName.split('.').pop().toLowerCase();
             
             let extractedContent = '';
-            let filePreview = null; // Để lưu preview (base64 cho ảnh)
+            let filePreview = null; // URL từ Storage hoặc base64 tạm
+            let storageURL = null; // URL trên Firebase Storage
+            
+            // Upload file to Firebase Storage (if available and user logged in)
+            if (window.firebaseStorage && state.currentUser) {
+                try {
+                    const userId = state.currentUser.id;
+                    const storagePath = generateStoragePath(userId, fileName);
+                    
+                    // Upload with progress
+                    storageURL = await uploadFileToStorage(file, storagePath, (progress) => {
+                        console.log(`Uploading ${fileName}: ${progress.toFixed(0)}%`);
+                        // Could show progress bar here
+                    });
+                    
+                    console.log('File uploaded to Storage:', storageURL);
+                    
+                    // For images, use Storage URL as preview
+                    if (fileType.startsWith('image/')) {
+                        filePreview = storageURL;
+                    }
+                } catch (error) {
+                    console.error('Storage upload failed, falling back to base64:', error);
+                    showToast('⚠️ Không thể upload lên Storage, dùng bộ nhớ tạm', 'warning');
+                }
+            }
             
             // Process based on file type
             if (fileType.startsWith('image/')) {
                 // For images, use image-scan API (expects imageBase64, mimeType, action)
                 const base64 = await fileToBase64(file); // only the data part
-                filePreview = `data:${fileType};base64,${base64}`; // Lưu để hiển thị
+                
+                // Use Storage URL if available, otherwise fallback to base64
+                if (!filePreview) {
+                    filePreview = `data:${fileType};base64,${base64}`;
+                }
                 
                 const idToken = await getFirebaseIdToken();
                 const headers = { 'Content-Type': 'application/json; charset=utf-8' };
@@ -701,7 +730,9 @@ async function handleLearningFileUpload(event) {
                 timestamp: Date.now(),
                 fileName: fileName,
                 fileType: fileType,
-                filePreview: filePreview
+                filePreview: filePreview,
+                storageURL: storageURL, // URL on Firebase Storage
+                storagePath: storageURL ? generateStoragePath(state.currentUser?.id || 'anonymous', fileName) : null
             });
             
             // Append to context (để sử dụng cho các công cụ)
@@ -728,7 +759,12 @@ async function handleLearningFileUpload(event) {
             }
         }, 100);
         
-        showToast(`✅ Đã tải ${files.length} tài liệu thành công!`, 'success');
+        const uploadedToStorage = state.learningResults.filter(r => r.storageURL).length;
+        if (uploadedToStorage > 0) {
+            showToast(`✅ Đã tải ${files.length} file lên Firebase Storage!`, 'success');
+        } else {
+            showToast(`✅ Đã tải ${files.length} file (bộ nhớ tạm)`, 'success');
+        }
         
     } catch (error) {
         ProgressBar.done();
@@ -746,6 +782,90 @@ function fileToBase64(file) {
         reader.onerror = reject;
         reader.readAsDataURL(file);
     });
+}
+
+// ==========================================
+// FIREBASE STORAGE HELPERS
+// ==========================================
+
+/**
+ * Upload file to Firebase Storage
+ * @param {File} file - File object to upload
+ * @param {string} path - Storage path (e.g., 'learning-files/user123/image.jpg')
+ * @param {Function} onProgress - Callback for upload progress (optional)
+ * @returns {Promise<string>} Download URL
+ */
+async function uploadFileToStorage(file, path, onProgress = null) {
+    if (!window.firebaseStorage) {
+        throw new Error('Firebase Storage not initialized');
+    }
+    
+    const storageReference = window.firebaseStorageRef(window.firebaseStorage, path);
+    
+    if (onProgress) {
+        // Upload with progress tracking
+        const uploadTask = window.firebaseUploadBytesResumable(storageReference, file);
+        
+        return new Promise((resolve, reject) => {
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    onProgress(progress);
+                },
+                (error) => reject(error),
+                async () => {
+                    const downloadURL = await window.firebaseGetDownloadURL(uploadTask.snapshot.ref);
+                    resolve(downloadURL);
+                }
+            );
+        });
+    } else {
+        // Simple upload without progress
+        const snapshot = await window.firebaseUploadBytes(storageReference, file);
+        const downloadURL = await window.firebaseGetDownloadURL(snapshot.ref);
+        return downloadURL;
+    }
+}
+
+/**
+ * Delete file from Firebase Storage
+ * @param {string} url - Download URL or storage path
+ */
+async function deleteFileFromStorage(url) {
+    if (!window.firebaseStorage) {
+        throw new Error('Firebase Storage not initialized');
+    }
+    
+    try {
+        // Extract path from URL or use as-is
+        let path = url;
+        if (url.includes('firebasestorage.googleapis.com')) {
+            const urlObj = new URL(url);
+            const pathMatch = urlObj.pathname.match(/\/o\/(.+?)\?/);
+            if (pathMatch) {
+                path = decodeURIComponent(pathMatch[1]);
+            }
+        }
+        
+        const storageReference = window.firebaseStorageRef(window.firebaseStorage, path);
+        await window.firebaseDeleteObject(storageReference);
+        console.log('File deleted successfully:', path);
+    } catch (error) {
+        console.error('Error deleting file:', error);
+        throw error;
+    }
+}
+
+/**
+ * Generate unique file path for user
+ * @param {string} userId - User ID
+ * @param {string} fileName - Original file name
+ * @returns {string} Unique storage path
+ */
+function generateStoragePath(userId, fileName) {
+    const timestamp = Date.now();
+    const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+    return `learning-files/${userId}/${timestamp}_${sanitizedFileName}`;
 }
 
 async function processLearningAction(action) {
@@ -838,14 +958,37 @@ function removeLearningFile(index) {
     showToast('Đã xóa tệp', 'info');
 }
 
-function removeLearningResult(index) {
+async function removeLearningResult(index) {
+    const result = state.learningResults[index];
+    
+    // Delete from Storage if has storage URL
+    if (result && result.storageURL) {
+        try {
+            await deleteFileFromStorage(result.storageURL);
+            console.log('File deleted from Storage:', result.fileName);
+        } catch (error) {
+            console.error('Failed to delete from Storage:', error);
+        }
+    }
+    
     state.learningResults.splice(index, 1);
     renderApp();
     showToast('Đã xóa kết quả', 'info');
 }
 
-function clearLearningContext() {
+async function clearLearningContext() {
     if (!confirm('Xóa toàn bộ nội dung và kết quả?')) return;
+    
+    // Delete all files from Storage
+    const filesToDelete = state.learningResults.filter(r => r.storageURL);
+    if (filesToDelete.length > 0) {
+        try {
+            await Promise.all(filesToDelete.map(r => deleteFileFromStorage(r.storageURL)));
+            console.log(`Deleted ${filesToDelete.length} files from Storage`);
+        } catch (error) {
+            console.error('Failed to delete some files from Storage:', error);
+        }
+    }
     
     state.learningContext = '';
     state.learningFiles = [];
@@ -3825,11 +3968,17 @@ function renderLearningResultsArea() {
                         <div class="prose prose-sm max-w-none ${styles.textPrimary} leading-relaxed">
                             ${simpleMarkdown(result.content)}
                         </div>
-                        <div class="mt-4 pt-4 border-t ${styles.border} flex items-center justify-between">
+                        <div class="mt-4 pt-4 border-t ${styles.border} flex items-center justify-between flex-wrap gap-2">
                             <div class="text-xs ${styles.textSecondary}">
                                 <i data-lucide="clock" size="12" class="inline mr-1"></i>
                                 ${new Date(result.timestamp).toLocaleString('vi-VN')}
                             </div>
+                            ${result.storageURL ? `
+                                <div class="text-xs px-2 py-1 rounded-lg bg-green-500/10 text-green-500 border border-green-500/20 flex items-center gap-1">
+                                    <i data-lucide="cloud" size="12"></i>
+                                    <span>Firebase Storage</span>
+                                </div>
+                            ` : ''}
                             ${result.promptTitle ? `
                                 <div class="text-xs px-2 py-1 rounded-lg bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
                                     Prompt: ${result.promptTitle}
