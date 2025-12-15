@@ -363,7 +363,11 @@ async function syncPromptToFirebase(prompt) {
 
 // Sync prompt to Firestore (collection 'prompts', doc id = prompt.id)
 async function syncPromptToFirestore(prompt) {
-    if (!window.db || !window.setDoc || !window.doc) return;
+    if (!window.db || !window.setDoc || !window.doc) {
+        console.warn('Firestore chưa sẵn sàng (window.db/setDoc/doc thiếu)');
+        showToast('⚠️ Firestore chưa sẵn sàng. Thử lại sau.');
+        return;
+    }
     try {
         const docRef = window.doc(window.db, 'prompts', String(prompt.id));
         const safePrompt = {
@@ -380,8 +384,11 @@ async function syncPromptToFirestore(prompt) {
             isTeacherFixed: prompt.isTeacherFixed ?? false
         };
         await window.setDoc(docRef, safePrompt, { merge: true });
+        console.info('✅ Đã lưu prompt lên Firestore:', safePrompt.id);
+        showToast('✅ Đã lưu prompt lên Firestore');
     } catch (e) {
         console.error('❌ Lỗi sync prompt Firestore:', e);
+        showToast('❌ Lỗi Firestore: ' + (e?.message || e));
     }
 }
 
