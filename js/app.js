@@ -672,7 +672,18 @@ async function handleLearningFileUpload(event) {
                 content: extractedContent
             });
             
-            // Append to context
+            // Thêm vào results để hiển thị
+            state.learningResults.push({
+                title: `📎 ${fileName}`,
+                content: extractedContent,
+                icon: fileType.startsWith('image/') ? '<i data-lucide="image" size="18" class="text-blue-500"></i>' : '<i data-lucide="file" size="18" class="text-green-500"></i>',
+                color: fileType.startsWith('image/') ? 'blue' : 'green',
+                timestamp: Date.now(),
+                fileName: fileName,
+                fileType: fileType
+            });
+            
+            // Append to context (để sử dụng cho các công cụ)
             state.learningContext = (state.learningContext || '') + `\n\n### Tài liệu: ${fileName}\n\n${extractedContent}`;
         }
         
@@ -687,7 +698,16 @@ async function handleLearningFileUpload(event) {
         ProgressBar.done();
         state.isLoadingPrompts = false;
         renderApp();
-        showToast(`Đã tải ${files.length} tài liệu thành công!`, 'success');
+        
+        // Scroll to bottom to show new content
+        setTimeout(() => {
+            const resultsContainer = document.querySelector('.flex-1.overflow-y-auto.custom-scrollbar');
+            if (resultsContainer) {
+                resultsContainer.scrollTop = resultsContainer.scrollHeight;
+            }
+        }, 100);
+        
+        showToast(`✅ Đã tải ${files.length} tài liệu thành công!`, 'success');
         
     } catch (error) {
         ProgressBar.done();
@@ -957,7 +977,7 @@ function loadPromptTemplate() {
     showToast('Chọn prompt từ thư viện để sử dụng', 'info');
 }
 
-function selectPromptForLearning(promptId) {
+async function selectPromptForLearning(promptId) {
     console.log('selectPromptForLearning called with promptId:', promptId);
     console.log('Available prompts count:', state.prompts.length);
     
@@ -982,19 +1002,56 @@ function selectPromptForLearning(promptId) {
     
     renderApp();
     
-    // Auto-fill the textarea
-    setTimeout(() => {
+    // Auto-fill the textarea and run it automatically
+    setTimeout(async () => {
         const textarea = document.getElementById('learning-prompt-input');
         console.log('Textarea found:', !!textarea);
         if (textarea) {
             textarea.value = prompt.content;
-            textarea.focus();
             console.log('Textarea filled with content');
+            
+            // Tự động chạy prompt để hiển thị kết quả
+            try {
+                state.isLoadingPrompts = true;
+                ProgressBar.start();
+                renderApp();
+                
+                const useUserKey = state.userApiKey ? true : false;
+                const result = await callGeminiAPI(prompt.content, useUserKey);
+                
+                ProgressBar.done();
+                
+                // Lưu kết quả vào learningContext
+                state.learningContext = result;
+                
+                // Thêm vào results với thông tin prompt
+                state.learningResults.push({
+                    title: `📝 Kết quả: ${prompt.title}`,
+                    content: result,
+                    icon: '<i data-lucide="sparkles" size="18" class="text-indigo-500"></i>',
+                    color: 'indigo',
+                    timestamp: Date.now(),
+                    promptTitle: prompt.title
+                });
+                
+                // Add gamification points
+                if (state.currentUser) {
+                    addPoints(20, 'Chạy prompt mẫu trong Learning Space');
+                }
+                
+                state.isLoadingPrompts = false;
+                renderApp();
+                showToast(`✨ Đã chạy prompt: ${prompt.title}`, 'success');
+            } catch (error) {
+                console.error('Error running prompt:', error);
+                ProgressBar.done();
+                state.isLoadingPrompts = false;
+                renderApp();
+                showToast('❌ Lỗi: ' + error.message, 'error');
+            }
         }
         lucide.createIcons();
     }, 100);
-    
-    showToast(`Đã chọn: ${prompt.title}`, 'success');
 }
 
 function cancelSelectingForLearning() {
@@ -3702,8 +3759,8 @@ function renderLearningMainContent() {
                 </div>
             </div>
             
-            <!-- Results Area -->
-            <div class="flex-1 overflow-y-auto">
+            <!-- Results Area - Scrollable -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar space-y-4">
                 ${state.isLoadingPrompts ? `
                     <div class="flex items-center justify-center py-12">
                         <div class="text-center">
@@ -3711,34 +3768,36 @@ function renderLearningMainContent() {
                             <p class="${styles.textPrimary} font-bold">Đang xử lý...</p>
                         </div>
                     </div>
-                ` : state.learningContext ? `
-                    <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6 mb-4">
+                ` : ''}
+                
+                <!-- Nội dung gốc -->
+                ${state.learningContext ? `
+                    <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6 shadow-lg animate-fadeIn">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="font-bold ${styles.textPrimary} flex items-center gap-2">
                                 <i data-lucide="file-text" size="18" class="text-indigo-500"></i>
-                                Nội dung gốc
+                                Nội dung đã xử lý
                             </h3>
-                            <button onclick="copyToClipboard(\`${state.learningContext.replace(/`/g, '\\`')}\`)" class="text-xs px-3 py-1.5 rounded-lg ${styles.iconBg} hover:bg-indigo-500/10 ${styles.textSecondary} hover:text-indigo-500 transition-all">
+                            <button onclick="copyToClipboard(\`${state.learningContext.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" class="text-xs px-3 py-1.5 rounded-lg ${styles.iconBg} hover:bg-indigo-500/10 ${styles.textSecondary} hover:text-indigo-500 transition-all">
                                 <i data-lucide="copy" size="14" class="inline mr-1"></i> Sao chép
                             </button>
                         </div>
-                        <div class="prose prose-sm max-w-none ${styles.textPrimary}">
+                        <div class="prose prose-sm max-w-none ${styles.textPrimary} leading-relaxed">
                             ${simpleMarkdown(state.learningContext)}
                         </div>
                     </div>
-                ` : `
-                    ${renderEmptyOverlay('No Data Found', 'Chưa có nội dung học tập. Nhập prompt hoặc tải tài liệu để bắt đầu.')}
-                `}
+                ` : ''}
                 
+                <!-- Kết quả từ các công cụ -->
                 ${state.learningResults.length > 0 ? state.learningResults.map((result, idx) => `
-                    <div class="${styles.cardBg} border ${styles.border} rounded-2xl p-6 mb-4 animate-fadeIn">
+                    <div class="${styles.cardBg} border-2 ${result.fileName ? 'border-' + result.color + '-500/30' : styles.border} rounded-2xl p-6 shadow-lg animate-fadeIn hover:shadow-xl transition-all">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="font-bold ${styles.textPrimary} flex items-center gap-2">
                                 ${result.icon}
-                                ${result.title}
+                                <span class="line-clamp-1">${result.title}</span>
                             </h3>
                             <div class="flex gap-2">
-                                <button onclick="copyToClipboard(\`${result.content.replace(/`/g, '\\`')}\`)" class="text-xs px-3 py-1.5 rounded-lg ${styles.iconBg} hover:bg-${result.color}-500/10 ${styles.textSecondary} hover:text-${result.color}-500 transition-all">
+                                <button onclick="copyToClipboard(\`${result.content.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" class="text-xs px-3 py-1.5 rounded-lg ${styles.iconBg} hover:bg-${result.color}-500/10 ${styles.textSecondary} hover:text-${result.color}-500 transition-all">
                                     <i data-lucide="copy" size="14" class="inline mr-1"></i> Sao chép
                                 </button>
                                 <button onclick="removeLearningResult(${idx})" class="text-xs px-3 py-1.5 rounded-lg ${styles.iconBg} hover:bg-red-500/10 ${styles.textSecondary} hover:text-red-500 transition-all">
@@ -3746,18 +3805,61 @@ function renderLearningMainContent() {
                                 </button>
                             </div>
                         </div>
-                        <div class="prose prose-sm max-w-none ${styles.textPrimary}">
+                        ${result.fileType && result.fileType.startsWith('image/') ? `
+                            <div class="mb-4 rounded-xl overflow-hidden border ${styles.border}">
+                                <div class="bg-gradient-to-br from-${result.color}-500/5 to-purple-500/5 p-4 text-center">
+                                    <p class="text-xs ${styles.textSecondary} mb-2">Preview ảnh đã tải lên:</p>
+                                    <div class="inline-block max-w-full">
+                                        <div class="text-sm ${styles.textSecondary} italic">Ảnh: ${result.fileName}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
+                        <div class="prose prose-sm max-w-none ${styles.textPrimary} leading-relaxed">
                             ${simpleMarkdown(result.content)}
+                        </div>
+                        <div class="mt-4 pt-4 border-t ${styles.border} flex items-center justify-between">
+                            <div class="text-xs ${styles.textSecondary}">
+                                <i data-lucide="clock" size="12" class="inline mr-1"></i>
+                                ${new Date(result.timestamp).toLocaleString('vi-VN')}
+                            </div>
+                            ${result.promptTitle ? `
+                                <div class="text-xs px-2 py-1 rounded-lg bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+                                    Prompt: ${result.promptTitle}
+                                </div>
+                            ` : ''}
+                            ${result.fileName ? `
+                                <div class="text-xs px-2 py-1 rounded-lg bg-${result.color}-500/10 text-${result.color}-500 border border-${result.color}-500/20">
+                                    ${result.fileType?.startsWith('image/') ? '📷' : '📄'} File: ${result.fileName.length > 20 ? result.fileName.substring(0, 20) + '...' : result.fileName}
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 `).join('') : ''}
                 
-                ${!state.learningContext && state.learningResults.length === 0 ? `
-                    <div class="flex items-center justify-center h-full">
-                        <div class="text-center py-12">
-                            <i data-lucide="lightbulb" size="64" class="${styles.textSecondary} mx-auto mb-4 opacity-20"></i>
-                            <h3 class="text-xl font-bold ${styles.textPrimary} mb-2">Bắt đầu học tập</h3>
-                            <p class="${styles.textSecondary} max-w-md">Nhập nội dung bài học hoặc tải tài liệu lên, sau đó sử dụng các công cụ bên phải để học hiệu quả hơn</p>
+                <!-- Empty state -->
+                ${!state.isLoadingPrompts && !state.learningContext && state.learningResults.length === 0 ? `
+                    <div class="flex items-center justify-center h-full min-h-[400px]">
+                        <div class="text-center py-12 max-w-lg">
+                            <div class="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center">
+                                <i data-lucide="lightbulb" size="48" class="text-indigo-500"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold ${styles.textPrimary} mb-3">Chào mừng đến Không gian học tập</h3>
+                            <p class="${styles.textSecondary} mb-6">Nhập nội dung bài học, chọn prompt mẫu hoặc tải tài liệu lên để bắt đầu. Kết quả sẽ hiển thị tại đây và bạn có thể cuộn xuống để xem tất cả.</p>
+                            <div class="flex flex-col gap-3 items-center">
+                                <div class="flex items-center gap-2 text-sm ${styles.textSecondary}">
+                                    <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                                    <span>Nhập prompt hoặc câu hỏi phía trên</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-sm ${styles.textSecondary}">
+                                    <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                                    <span>Chọn prompt mẫu từ thư viện</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-sm ${styles.textSecondary}">
+                                    <span class="w-2 h-2 rounded-full bg-pink-500"></span>
+                                    <span>Tải file học thuật lên bên phải</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 ` : ''}
