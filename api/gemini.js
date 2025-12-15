@@ -74,7 +74,10 @@ module.exports = async function handler(req, res) {
                         }
                     ],
                     generationConfig: {
-                        temperature: temperature
+                        temperature: temperature,
+                        maxOutputTokens: 8192,  // Tăng giới hạn token output để cho phép response dài hơn
+                        topP: 0.95,             // Điều chỉnh sampling để response đa dạng hơn
+                        topK: 64                // Giới hạn vocabulary sampling
                     }
                 })
             });

@@ -1233,15 +1233,8 @@ function simpleMarkdown(text) {
 // Giữ phần trả lời gọn, tránh rơi thêm đoạn dài không cần thiết
 function cleanAIResponse(text) {
     if (!text) return '';
-    // Tách theo đoạn trống, giữ tối đa 2 đoạn đầu tiên
-    const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim());
-    let trimmed = paragraphs.slice(0, 2).join('\n\n');
-    // Giới hạn chiều dài để tránh hiển thị phần dư
-    const MAX_LEN = 1200;
-    if (trimmed.length > MAX_LEN) {
-        trimmed = trimmed.slice(0, MAX_LEN);
-    }
-    return trimmed;
+    // Trả về toàn bộ nội dung, không giới hạn
+    return text.trim();
 }
 
 // ==========================================
