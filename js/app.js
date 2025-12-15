@@ -377,7 +377,7 @@ async function syncPromptToFirestore(prompt) {
             content: prompt.content || '',
             category: prompt.category || 'Cá nhân',
             tags: prompt.tags || [],
-            createdBy: prompt.createdBy || (state.currentUser ? state.currentUser.id : null),
+            createdBy: prompt.createdBy || (window.firebaseAuth?.currentUser?.uid || (state.currentUser ? state.currentUser.id : null)),
             createdAt: prompt.createdAt || new Date().toISOString(),
             isShared: prompt.isShared ?? false,
             sharedWith: prompt.sharedWith || [],
@@ -2289,7 +2289,7 @@ function handleAddSubmit(e) {
         description: formData.get('description'),
         content: formData.get('content'),
         tags: ["New", "User"],
-        createdBy: state.currentUser?.id || null,
+        createdBy: (window.firebaseAuth?.currentUser?.uid) || state.currentUser?.id || null,
         createdAt: new Date().toISOString(),
         isShared: false,
         sharedWith: []
