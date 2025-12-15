@@ -3542,6 +3542,66 @@ function renderHero() {
                         <i data-lucide="sparkles" size="18"></i> Tạo prompt mới
                     </button>
                 </div>
+
+                <!-- Bento Grid: Aurora Glass Cards -->
+                <div class="mt-12 max-w-6xl mx-auto px-4">
+                    <div class="bento-grid">
+                        <div class="glass-aurora bento-card bento-span-3">
+                            <div class="flex items-center gap-3 mb-2">
+                                <i data-lucide="bot" size="18" class="text-indigo-300"></i>
+                                <h4 class="text-lg font-bold">Chat nhanh với AI</h4>
+                            </div>
+                            <p class="text-sm text-slate-300/80">Trao đổi tức thì, hiển thị markdown, code và công thức rõ ràng.</p>
+                            <div class="mt-3">
+                                <button onclick="switchView('learning')" class="text-xs px-3 py-1.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">Bắt đầu học</button>
+                            </div>
+                        </div>
+
+                        <div class="glass-aurora bento-card bento-span-3">
+                            <div class="flex items-center gap-3 mb-2">
+                                <i data-lucide="book-open" size="18" class="text-emerald-300"></i>
+                                <h4 class="text-lg font-bold">Không gian học tập</h4>
+                            </div>
+                            <p class="text-sm text-slate-300/80">Tóm tắt, Flashcards, Quiz, Giải thích — tất cả trong một nơi.</p>
+                            <div class="mt-3">
+                                <button onclick="switchView('learning')" class="text-xs px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">Mở Learning Space</button>
+                            </div>
+                        </div>
+
+                        <div class="glass-aurora bento-card bento-span-2">
+                            <div class="flex items-center gap-3 mb-2">
+                                <i data-lucide="scan" size="18" class="text-cyan-300"></i>
+                                <h4 class="text-lg font-bold">Quét ảnh OCR</h4>
+                            </div>
+                            <p class="text-sm text-slate-300/80">Chuyển ảnh đề bài thành văn bản, gợi ý prompt phù hợp.</p>
+                            <div class="mt-3">
+                                <button onclick="openModal('scan')" class="text-xs px-3 py-1.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">Quét ngay</button>
+                            </div>
+                        </div>
+
+                        <div class="glass-aurora bento-card bento-span-2">
+                            <div class="flex items-center gap-3 mb-2">
+                                <i data-lucide="upload-cloud" size="18" class="text-pink-300"></i>
+                                <h4 class="text-lg font-bold">Tải tài liệu</h4>
+                            </div>
+                            <p class="text-sm text-slate-300/80">PDF/Word/PPT & hình ảnh — lưu trên Firebase Storage.</p>
+                            <div class="mt-3">
+                                <button onclick="switchView('learning')" class="text-xs px-3 py-1.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-400/30">Tải lên</button>
+                            </div>
+                        </div>
+
+                        <div class="glass-aurora bento-card bento-span-2">
+                            <div class="flex items-center gap-3 mb-2">
+                                <i data-lucide="layers" size="18" class="text-purple-300"></i>
+                                <h4 class="text-lg font-bold">Flashcards</h4>
+                            </div>
+                            <p class="text-sm text-slate-300/80">Tạo thẻ ghi nhớ tự động từ nội dung bạn đưa vào.</p>
+                            <div class="mt-3">
+                                <button onclick="switchView('learning')" class="text-xs px-3 py-1.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-400/30">Tạo thẻ</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     `;

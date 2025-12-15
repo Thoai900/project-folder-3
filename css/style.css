@@ -37,6 +37,78 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(156, 163, 175, 0.8); }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 
+/* Aurora Background Animation */
+.aurora-bg {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    z-index: -1;
+    background: #0f172a;
+    overflow: hidden;
+}
+
+.aurora-blob {
+    position: absolute;
+    filter: blur(80px);
+    opacity: 0.6;
+    animation: drift 10s infinite alternate;
+}
+
+.blob-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: #6366f1; animation-duration: 20s; }
+.blob-2 { bottom: -10%; right: -10%; width: 50vw; height: 50vw; background: #ec4899; animation-duration: 15s; animation-delay: -5s; }
+.blob-3 { bottom: 20%; left: 20%; width: 30vw; height: 30vw; background: #06b6d4; animation-duration: 12s; animation-delay: -2s; }
+
+@keyframes drift {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(30px, 50px) scale(1.1); }
+}
+
+/* Ensure app-bg remains transparent to reveal aurora */
+#app-bg { background: transparent !important; }
+
+/* Aurora glass cards (for Bento grid) */
+.glass-aurora {
+    position: relative;
+    background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.06);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 16px;
+}
+
+.glass-aurora::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(1200px 300px at 10% 0%, rgba(99,102,241,0.2), transparent 40%),
+                radial-gradient(1200px 300px at 90% 100%, rgba(236,72,153,0.2), transparent 40%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Bento Grid */
+.bento-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.bento-card { padding: 20px; color: #e5e7eb; }
+.bento-span-2 { grid-column: span 2 / span 2; }
+.bento-span-3 { grid-column: span 3 / span 3; }
+.bento-span-4 { grid-column: span 4 / span 4; }
+
+@media (max-width: 1024px) {
+  .bento-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .bento-span-3 { grid-column: span 4 / span 4; }
+  .bento-span-4 { grid-column: span 4 / span 4; }
+}
+
+@media (max-width: 640px) {
+  .bento-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bento-span-2, .bento-span-3, .bento-span-4 { grid-column: span 2 / span 2; }
+}
 body {
     transition: background-color 0.5s, color 0.5s;
     font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
