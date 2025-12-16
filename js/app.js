@@ -1479,7 +1479,16 @@ function simpleMarkdown(text) {
         return `$${m.content}$`;
     });
     
-    return `<div class="markdown-body leading-7 text-sm space-y-3 w-full whitespace-pre-wrap ${state.theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}">${html}</div>`;
+    const wrappedHtml = `<div class="markdown-body leading-7 text-sm space-y-3 w-full whitespace-pre-wrap ${state.theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}">${html}</div>`;
+
+    // Sanitize final HTML to strip any unexpected scripts while keeping our UI hooks
+    if (window.DOMPurify?.sanitize) {
+        return DOMPurify.sanitize(wrappedHtml, {
+            ALLOW_DATA_ATTR: true,
+            ADD_ATTR: ['onclick', 'aria-label', 'target', 'rel', 'data-lucide', 'data-mermaid']
+        });
+    }
+    return wrappedHtml;
 }
 
 // Giữ phần trả lời gọn, tránh rơi thêm đoạn dài không cần thiết
