@@ -171,7 +171,7 @@ const firebaseConfig = {
     authDomain: "prompt-573fc.firebaseapp.com",
     databaseURL: "https://prompt-573fc-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "prompt-573fc",
-    storageBucket: "prompt-573fc.firebasestorage.app",
+    storageBucket: "prompt-573fc.appspot.com",
     messagingSenderId: "362695103484",
     appId: "1:362695103484:web:036d2d722e6754aeaed879",
     measurementId: "G-9X3DY739S9"
