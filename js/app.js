@@ -2707,6 +2707,17 @@ async function runPrompt() {
         // Lưu responseText vào state để các function khác có thể truy cập
         const resultIndex = state.chatHistory.length - 1;
         
+        // Thêm cảnh báo về dữ liệu AI
+        const warningHTML = `
+            <div class="flex items-start gap-2 mt-3 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                <i data-lucide="alert-triangle" size="14" class="text-amber-500 mt-0.5 flex-shrink-0"></i>
+                <p class="text-[11px] ${styles.textSecondary} leading-relaxed">
+                    <span class="font-semibold text-amber-600">Lưu ý:</span> Câu trả lời của AI chỉ mang tính chất tham khảo. Vui lòng kiểm chứng thông tin từ các nguồn đáng tin cậy trước khi sử dụng.
+                </p>
+            </div>
+        `;
+        aiContentElement.insertAdjacentHTML('beforeend', warningHTML);
+        
         // Thêm action buttons nhỏ dưới chân khung trả lời của AI
         const actionButtonsHTML = `
             <div class="flex items-center gap-2 mt-3 pt-2 border-t ${styles.border}">
